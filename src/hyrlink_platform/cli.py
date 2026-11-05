@@ -2,12 +2,20 @@
 
 import argparse
 import json
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from .automation import compose, generate_catalog, provision_repositories, scaffold
 from .contracts import PlatformError, load_catalog, parse_json
 from .runtime import Kernel, PlatformAgent, Principal
+
+
+def workos_config_status(environ):
+    """Report presence only; never return credentials or configuration values."""
+    names = ("WORKOS_CLIENT_ID", "WORKOS_API_KEY", "WORKOS_ISSUER", "WORKOS_AUDIENCE",
+             "WORKOS_REDIRECT_URI", "WORKOS_COOKIE_PASSWORD")
+    return {name: "set" if environ.get(name, "").strip() else "not set" for name in names}
 
 
 def demo(catalog):
@@ -61,6 +69,7 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("validate")
     commands.add_parser("demo")
+    commands.add_parser("workos-config")
     for command in ("compose", "scaffold", "catalog"):
         child = commands.add_parser(command)
         child.add_argument("--output", required=True, type=Path)
@@ -80,7 +89,9 @@ def main():
     root = args.root.resolve()
     try:
         manifest = parse_json((root / "docs/architecture/module-repositories.json").read_bytes())
-        if args.command == "catalog":
+        if args.command == "workos-config":
+            result = {"workos": workos_config_status(os.environ), "connectivity": "not tested"}
+        elif args.command == "catalog":
             generate_catalog(manifest, args.output)
             result = {"generated": len(manifest["repositories"])}
         elif args.command == "scaffold":

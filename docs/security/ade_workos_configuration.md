@@ -16,6 +16,25 @@ WorkOS is the selected identity provider for the HRIS backbone. The user has con
 
 Use separate WorkOS development, staging, and production environments and keys. Grant the minimum API permissions the implemented features require. Configure callback URLs in the WorkOS dashboard for the intended deployment; do not guess a production callback.
 
+## Local development file
+
+From the backbone checkout in PowerShell, create the local file only if it does not already exist:
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
+```
+
+Fill in `WORKOS_CLIENT_ID` and `WORKOS_API_KEY` from the separate WorkOS development environment. Leave the other fields blank until their values are established. `.env` is ignored by Git; `.env.example` contains placeholders only. Keep `.env` on the server or development machine and never include it in an archive or browser bundle.
+
+Check only whether values are present, without displaying them:
+
+```powershell
+uv run --env-file .env --frozen hyrlink workos-config
+```
+
+The command loads the file for that invocation and reports `set` or `not set`. It does not validate credentials, contact WorkOS, start sign-in, or automatically configure other processes. Existing process environment variables take precedence. For deployed services, inject values through the deployment's secret manager rather than distributing a local file.
+
 ## Current integration boundary
 
 The backbone can validate an RS256 token using explicitly trusted RSA public keys, bind an organization claim to an active server-resolved tenant, and load permissions from a server-side grants source. `ade_workos_keys.py` provides a bounded, fixed-host client and short-lived key snapshot for the WorkOS AuthKit **session-token** JWKS endpoint. It does not send the API key to the JWKS endpoint. Expired snapshots are not reused on fetch failure; trusted operators can request an explicit refresh during key rotation. A request-supplied key ID must never trigger an unbounded refresh.
