@@ -1,17 +1,26 @@
 """Integration tests: run only against an explicitly disposable database."""
 
 import os
+import asyncio
+import json
 import unittest
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import psycopg
+import jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
 from psycopg.conninfo import make_conninfo
 
 from hyrlink_platform.ade_identity_directory import IdentityDirectory
 from hyrlink_platform.ade_transaction_store import TenantRecordStore
 from hyrlink_platform.ade_outbox import Outbox
+from hyrlink_platform.ade_storage_contracts import OutboxStore, RecordStore, TenantDirectory
+from hyrlink_platform.ade_identity_middleware import IdentityMiddleware
+from hyrlink_platform.ade_workos_boundary import WorkOSSessionBoundary
+from hyrlink_platform.ade_workos_keys import SessionKeyStore
+from hyrlink_platform.identity import IdentityPolicy
 from hyrlink_platform.contracts import PlatformError
 from hyrlink_platform.runtime import Principal
 
@@ -52,6 +61,48 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
         self.assertEqual((tenant.tenant, tenant.organization, tenant.active), ("acme", "org-acme", True))
         self.assertFalse(self.directory.tenant_for_host("paused.example.com").active)
         self.assertIsNone(self.directory.tenant_for_host("missing.example.com"))
+
+    def test_postgresql_adapters_satisfy_storage_interfaces(self):
+        self.assertIsInstance(self.directory, TenantDirectory)
+        self.assertIsInstance(self.store, RecordStore)
+        self.assertIsInstance(self.outbox, OutboxStore)
+
+    def test_signed_http_request_uses_fresh_database_grants(self):
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key()))
+        jwk.update({"kid": "test-key", "alg": "RS256", "use": "sig"})
+        key_store = SessionKeyStore("client_0123456789ABCDEF", fetch=lambda _: json.dumps({"keys": [jwk]}).encode())
+        boundary = WorkOSSessionBoundary.from_directory(
+            IdentityPolicy("https://issuer.example", "hris-api"), key_store, self.directory)
+        import time
+        now = int(time.time())
+        token = jwt.encode({"iss": "https://issuer.example", "aud": "hris-api", "sub": "user-1",
+                            "org_id": "org-acme", "token_use": "access", "iat": now, "nbf": now,
+                            "exp": now + 300, "permissions": ["platform:approve"]}, key,
+                           algorithm="RS256", headers={"kid": "test-key"})
+        observed = []
+        async def app(scope, receive, send):
+            observed.append(scope["ade.principal"])
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"ok"})
+        middleware = IdentityMiddleware(app, boundary)
+        async def request(host):
+            responses = []
+            async def receive(): return {"type": "http.request", "body": b""}
+            async def send(message): responses.append(message)
+            await middleware({"type": "http", "headers": [(b"host", host),
+                             (b"authorization", ("Bearer " + token).encode())]}, receive, send)
+            return responses[0]["status"]
+        self.assertEqual(asyncio.run(request(b"acme.example.com")), 200)
+        self.assertEqual(observed[0].permissions, frozenset({"client-crm:read"}))
+        self.assertEqual(asyncio.run(request(b"globex.example.com")), 401)
+        with psycopg.connect(DSN) as connection:
+            connection.execute("UPDATE ade_identity.memberships SET status='suspended' WHERE tenant_id='acme' AND subject='user-1'")
+        try:
+            self.assertEqual(asyncio.run(request(b"acme.example.com")), 401)
+        finally:
+            with psycopg.connect(DSN) as connection:
+                connection.execute("UPDATE ade_identity.memberships SET status='active' WHERE tenant_id='acme' AND subject='user-1'")
 
     def test_grants_are_scoped_to_active_membership(self):
         self.assertEqual(self.directory.grants_for_subject("user-1", "acme"), frozenset({"client-crm:read"}))

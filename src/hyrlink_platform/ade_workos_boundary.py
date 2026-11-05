@@ -2,6 +2,7 @@
 
 from .contracts import PlatformError
 from .identity import IdentityBoundary
+from .ade_storage_contracts import TenantDirectory
 
 
 class WorkOSSessionBoundary:
@@ -14,6 +15,13 @@ class WorkOSSessionBoundary:
     def __init__(self, policy, key_store, tenants, grants):
         self.policy, self.key_store = policy, key_store
         self.tenants, self.grants = tenants, grants
+
+    @classmethod
+    def from_directory(cls, policy, key_store, directory: TenantDirectory):
+        """Wire a server-owned directory without assuming a database provider."""
+        if not isinstance(directory, TenantDirectory):
+            raise TypeError("invalid_tenant_directory")
+        return cls(policy, key_store, directory.tenant_for_host, directory.grants_for_subject)
 
     def authenticate(self, authorization, host):
         try:

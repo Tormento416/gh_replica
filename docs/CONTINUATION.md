@@ -16,6 +16,8 @@ Outbox continuation: tenant-scoped event leasing, completion, retry and expired-
 
 Database selection update: the user is comparing Supabase and MongoDB while startup-program decisions are pending. Supabase is PostgreSQL-based; existing PostgreSQL work is a candidate, not a confirmed Supabase integration or final database choice. Keep interfaces provider-neutral and assess both options as described in ADR-006 before committing to a production data layer.
 
+Latest storage continuation: provider-neutral directory, record and outbox interfaces now exist. A signed synthetic HTTP request has been tested through the identity middleware and a real PostgreSQL directory, including cross-tenant rejection and immediate membership suspension. The PostgreSQL test instance is disposable. Supabase and MongoDB adapters and full production security/recovery remain unverified.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

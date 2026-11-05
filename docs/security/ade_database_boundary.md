@@ -4,6 +4,8 @@ The user is evaluating Supabase and MongoDB pending startup-program decisions. T
 
 The identity directory stores customer host-to-tenant and WorkOS organization mappings, membership states, and explicit subject/tenant permissions. The tenant record example and outbox demonstrate transactional data isolation. Both migrations are additive foundations; they do not implement a complete HRIS schema, production migration service, or event dispatcher.
 
+`ade_storage_contracts.py` defines provider-neutral interfaces for directory, record and outbox behavior. The WorkOS session boundary can be constructed with any implementation of the directory interface. A structural interface check verifies only method availability, not the implementation's security or transaction semantics. MongoDB and Supabase implementations must independently pass tenant-isolation, revocation, atomicity, lease, rollback and recovery tests before adoption.
+
 ## Roles and trust
 
 - Apply the migrations in numeric order using a controlled migration owner. They are designed for a fresh database; do not blindly rerun them over existing schemas.
@@ -24,6 +26,6 @@ No connection pool is implemented. The middleware executes identity checks in wo
 
 The PostgreSQL tests require `ADE_TEST_DATABASE_URL` pointing to a **new, disposable cluster/database** with privileges to create the test role and schemas. They refuse to run if the identity/core schemas or test role already exist. Never point them at an existing shared or production cluster. The test role is deliberately non-owner, non-superuser and without `BYPASSRLS`.
 
-The CI definition starts a disposable PostgreSQL service and supplies synthetic test credentials. Tests cover scoped identity grants, revocation, no-context denial, cross-tenant insert rejection, record/outbox rollback, concurrent workers, expired leases and retries. Without the variable, database integration tests are reported as skipped; a passing unit-test run alone does not establish database readiness.
+The CI definition starts a disposable PostgreSQL service and supplies synthetic test credentials. Tests cover scoped identity grants, revocation, no-context denial, cross-tenant insert rejection, record/outbox rollback, concurrent workers, expired leases and retries. A synthetic signed HTTP request also verifies live directory grants and rejects a suspended membership. Without the variable, database integration tests are reported as skipped; a passing unit-test run alone does not establish database readiness.
 
 The current WorkOS `.env` settings are unrelated to the database test credential. The WorkOS client ID, issuer, audience and API key are still required as appropriate for the separate provider environment before live provider verification.
