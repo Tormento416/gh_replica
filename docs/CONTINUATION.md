@@ -12,6 +12,8 @@ Latest continuation: the key store and tenant boundary are connected through ref
 
 Database continuation: PostgreSQL migrations now define an identity directory, tenant-scoped example records and a transactional outbox; adapters and restricted-role integration tests are implemented. See `docs/security/ade_database_boundary.md`. They do not constitute a production storage deployment. Next: migration version management, deployment roles/TLS, durable outbox dispatch and idempotency, encrypted real domain records, integration of the directory into a running service, and a controlled provider test once WorkOS configuration is available.
 
+Outbox continuation: tenant-scoped event leasing, completion, retry and expired-lease reclaim are implemented and tested using concurrent workers. They provide at-least-once leasing, not a network delivery adapter or exactly-once processing. The separate staging client can reach its public WorkOS signing-key endpoint; actual login and token-profile compatibility are still unverified. Next implement a real bounded delivery adapter and deduplication, migration management, production roles/TLS and the provider sign-in integration.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

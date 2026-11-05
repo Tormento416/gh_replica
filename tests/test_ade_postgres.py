@@ -3,6 +3,7 @@
 import os
 import unittest
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import psycopg
@@ -10,6 +11,7 @@ from psycopg.conninfo import make_conninfo
 
 from hyrlink_platform.ade_identity_directory import IdentityDirectory
 from hyrlink_platform.ade_transaction_store import TenantRecordStore
+from hyrlink_platform.ade_outbox import Outbox
 from hyrlink_platform.contracts import PlatformError
 from hyrlink_platform.runtime import Principal
 
@@ -29,16 +31,19 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
                 raise RuntimeError("integration tests require a fresh disposable database and role")
             connection.execute((ROOT / "migrations/ade_001_identity_directory.sql").read_text(), prepare=False)
             connection.execute((ROOT / "migrations/ade_002_transaction_boundary.sql").read_text(), prepare=False)
+            connection.execute((ROOT / "migrations/ade_003_outbox_leases.sql").read_text(), prepare=False)
             connection.execute("CREATE ROLE ade_test_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS")
             connection.execute("GRANT USAGE ON SCHEMA ade_identity, ade_core TO ade_test_runtime")
             connection.execute("GRANT SELECT ON ALL TABLES IN SCHEMA ade_identity TO ade_test_runtime")
-            connection.execute("GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA ade_core TO ade_test_runtime")
+            connection.execute("GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA ade_core TO ade_test_runtime")
             connection.execute("INSERT INTO ade_identity.tenants VALUES ('acme', 'acme.example.com', 'org-acme', 'active'), ('globex', 'globex.example.com', 'org-globex', 'active'), ('paused', 'paused.example.com', 'org-paused', 'suspended')")
             connection.execute("INSERT INTO ade_identity.memberships VALUES ('acme', 'user-1', 'active'), ('globex', 'user-1', 'active'), ('acme', 'blocked', 'suspended'), ('acme', 'empty', 'active')")
             connection.execute("INSERT INTO ade_identity.grants VALUES ('acme', 'user-1', 'client-crm:read'), ('globex', 'user-1', 'recruiting:read'), ('acme', 'blocked', 'client-crm:read')")
         cls.runtime_dsn = make_conninfo(DSN, options="-c role=ade_test_runtime")
         cls.directory = IdentityDirectory(cls.runtime_dsn)
         cls.store = TenantRecordStore(cls.runtime_dsn)
+        cls.outbox = Outbox(cls.runtime_dsn)
+        cls.worker = Principal("worker", "acme", frozenset({"platform:outbox-dispatch"}))
         cls.acme = Principal("user-1", "acme", frozenset({"platform:records-read", "platform:records-write"}))
         cls.globex = Principal("user-1", "globex", cls.acme.permissions)
 
@@ -97,6 +102,47 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
                 self.assertEqual(before, after)
             finally:
                 connection.execute("GRANT INSERT ON ade_core.outbox TO ade_test_runtime")
+
+    def test_workers_claim_disjoint_events_and_cannot_cross_tenants(self):
+        for i in range(8):
+            self.store.create(self.acme, {"synthetic": i})
+        self.store.create(self.globex, {"synthetic": "other"})
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            groups = list(pool.map(lambda _: self.outbox.claim(self.worker, limit=4), range(2)))
+        all_events = groups[0] + groups[1]
+        self.assertEqual(len(all_events), 8)
+        self.assertEqual(len({event["event_id"] for event in all_events}), 8)
+        other = Principal("worker", "globex", self.worker.permissions)
+        with self.assertRaisesRegex(PlatformError, "outbox_lease_invalid"):
+            self.outbox.complete(other, all_events[0]["event_id"], all_events[0]["lease_id"])
+        for event in all_events:
+            self.outbox.complete(self.worker, event["event_id"], event["lease_id"])
+
+    def test_retry_releases_lease_and_rejects_stale_ack(self):
+        self.store.create(self.acme, {"synthetic": "retry"})
+        event = self.outbox.claim(self.worker, limit=1)[0]
+        self.outbox.retry(self.worker, event["event_id"], event["lease_id"], 0)
+        with self.assertRaisesRegex(PlatformError, "outbox_lease_invalid"):
+            self.outbox.complete(self.worker, event["event_id"], event["lease_id"])
+        reclaimed = self.outbox.claim(self.worker, limit=1)[0]
+        self.assertEqual(reclaimed["event_id"], event["event_id"])
+        self.assertEqual(reclaimed["attempt"], 2)
+        self.outbox.complete(self.worker, reclaimed["event_id"], reclaimed["lease_id"])
+
+    def test_expired_lease_cannot_be_acknowledged(self):
+        self.store.create(self.acme, {"synthetic": "expired"})
+        event = self.outbox.claim(self.worker, limit=1)[0]
+        with psycopg.connect(DSN) as connection:
+            connection.execute("UPDATE ade_core.outbox SET lease_until=now() - interval '1 second' WHERE event_id=%s", (event["event_id"],))
+        with self.assertRaisesRegex(PlatformError, "outbox_lease_invalid"):
+            self.outbox.complete(self.worker, event["event_id"], event["lease_id"])
+        reclaimed = self.outbox.claim(self.worker, limit=1)[0]
+        self.assertEqual(reclaimed["event_id"], event["event_id"])
+        self.outbox.complete(self.worker, reclaimed["event_id"], reclaimed["lease_id"])
+
+    def test_dispatch_permission_required(self):
+        with self.assertRaisesRegex(PlatformError, "permission_denied"):
+            self.outbox.claim(Principal("user", "acme", frozenset()))
 
 
 if __name__ == "__main__":

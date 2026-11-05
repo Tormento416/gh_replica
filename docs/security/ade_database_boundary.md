@@ -4,7 +4,7 @@ The identity directory stores customer host-to-tenant and WorkOS organization ma
 
 ## Roles and trust
 
-- Apply `migrations/ade_001_identity_directory.sql` and `migrations/ade_002_transaction_boundary.sql` using a controlled migration owner. They are designed for a fresh database; do not blindly rerun them over existing schemas.
+- Apply the migrations in numeric order using a controlled migration owner. They are designed for a fresh database; do not blindly rerun them over existing schemas.
 - The identity adapter needs a separate read-only role with `USAGE` on `ade_identity` and `SELECT` on the three directory tables. It should not have application writes or schema ownership. Control-plane access to global tenant routing metadata must be private.
 - The record adapter needs a separate non-owner role with only the required `ade_core` privileges. It must not be a superuser, have `BYPASSRLS`, or inherit a privileged role. `FORCE ROW LEVEL SECURITY` does not constrain superusers or roles with `BYPASSRLS`.
 - Only trusted backend code may open database connections or run SQL. The backend sets `ade.tenant_id` transaction-locally from a verified principal. PostgreSQL custom settings are not credentials; a database client allowed to issue arbitrary SQL can set another tenant value. Database network access, injection prevention, backend identity and role design are part of the isolation boundary.
@@ -12,7 +12,9 @@ The identity directory stores customer host-to-tenant and WorkOS organization ma
 
 ## Atomicity and limits
 
-The sample store writes its record and outbox row in one database transaction. If the outbox insertion fails, the record rolls back. This is not a message broker, idempotency service, event delivery worker, exactly-once guarantee, audit log, payroll ledger, encryption system, or production domain model. Direct SQL permission to insert records does not force an outbox row; callers must use the approved transaction path until stronger enforcement is implemented.
+The sample store writes its record and outbox row in one database transaction. If the outbox insertion fails, the record rolls back. A tenant-scoped outbox lease manager allows concurrent workers to claim disjoint events, complete a valid lease, and retry or reclaim an expired lease. Event IDs must be used by downstream consumers for deduplication: if a delivery succeeds and acknowledgment fails, the event can be delivered again. The lease manager does not send messages itself.
+
+This is not a message broker, exactly-once guarantee, audit log, payroll ledger, encryption system, or production domain model. Direct SQL permission to insert records does not force an outbox row; callers must use the approved transaction path until stronger enforcement is implemented. Production needs a separate dispatcher role limited to the outbox, a trusted tenant-scoped worker identity, delivery adapters, retry/backoff/dead-letter policies, monitoring and idempotent consumers.
 
 No connection pool is implemented. The middleware executes identity checks in worker threads; the adapter avoids sharing database connections between threads. Production deployment needs a bounded pool, credentials and TLS, tenant-aware policies, migration/recovery procedures, encryption, operational metrics and a separate security review.
 
@@ -20,6 +22,6 @@ No connection pool is implemented. The middleware executes identity checks in wo
 
 The PostgreSQL tests require `ADE_TEST_DATABASE_URL` pointing to a **new, disposable cluster/database** with privileges to create the test role and schemas. They refuse to run if the identity/core schemas or test role already exist. Never point them at an existing shared or production cluster. The test role is deliberately non-owner, non-superuser and without `BYPASSRLS`.
 
-The CI definition starts a disposable PostgreSQL service and supplies synthetic test credentials. Tests cover scoped identity grants, revocation, no-context denial, cross-tenant insert rejection and record/outbox rollback. Without the variable, database integration tests are reported as skipped; a passing unit-test run alone does not establish database readiness.
+The CI definition starts a disposable PostgreSQL service and supplies synthetic test credentials. Tests cover scoped identity grants, revocation, no-context denial, cross-tenant insert rejection, record/outbox rollback, concurrent workers, expired leases and retries. Without the variable, database integration tests are reported as skipped; a passing unit-test run alone does not establish database readiness.
 
 The current WorkOS `.env` settings are unrelated to the database test credential. The WorkOS client ID, issuer, audience and API key are still required as appropriate for the separate provider environment before live provider verification.
