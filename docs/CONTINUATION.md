@@ -14,6 +14,8 @@ Database continuation: PostgreSQL migrations now define an identity directory, t
 
 Outbox continuation: tenant-scoped event leasing, completion, retry and expired-lease reclaim are implemented and tested using concurrent workers. They provide at-least-once leasing, not a network delivery adapter or exactly-once processing. The separate staging client can reach its public WorkOS signing-key endpoint; actual login and token-profile compatibility are still unverified. Next implement a real bounded delivery adapter and deduplication, migration management, production roles/TLS and the provider sign-in integration.
 
+Database selection update: the user is comparing Supabase and MongoDB while startup-program decisions are pending. Supabase is PostgreSQL-based; existing PostgreSQL work is a candidate, not a confirmed Supabase integration or final database choice. Keep interfaces provider-neutral and assess both options as described in ADR-006 before committing to a production data layer.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

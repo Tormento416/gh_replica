@@ -1,5 +1,7 @@
 # PostgreSQL identity and tenant boundary
 
+The user is evaluating Supabase and MongoDB pending startup-program decisions. This PostgreSQL implementation is a prototype and a possible basis for Supabase, which uses PostgreSQL. It has not been validated against Supabase and does not establish a production database choice. MongoDB would require a separate implementation and isolation tests.
+
 The identity directory stores customer host-to-tenant and WorkOS organization mappings, membership states, and explicit subject/tenant permissions. The tenant record example and outbox demonstrate transactional data isolation. Both migrations are additive foundations; they do not implement a complete HRIS schema, production migration service, or event dispatcher.
 
 ## Roles and trust

@@ -61,7 +61,7 @@ Deliver the public kernel, manifests, composition resolver, deterministic agents
 
 ### Wave 1 — Production platform boundary
 
-Implement an authenticated API facade, OIDC/tenant-host binding, policy adapter, PostgreSQL migrations/RLS, encrypted sensitive fields, transaction/outbox support, Temporal workers, secrets interfaces, per-tenant rate limits and OpenTelemetry. Build a common accessible TypeScript/React design system and module-aware navigation. Do not import optional UI bundles into the backbone shell. Exit: multi-tenant adversarial tests, workflow crash recovery, data backup/restore and end-to-end audit continuity pass in an isolated integration environment.
+Implement an authenticated API facade, OIDC/tenant-host binding, policy adapter, provider-neutral storage interfaces, encrypted sensitive fields, transaction/outbox support, Temporal workers, secrets interfaces, per-tenant rate limits and OpenTelemetry. Evaluate Supabase and MongoDB before choosing the production data layer; validate the existing PostgreSQL/RLS prototype against Supabase if selected, or implement and test an equivalent MongoDB isolation and transaction design. Build a common accessible TypeScript/React design system and module-aware navigation. Do not import optional UI bundles into the backbone shell. Exit: multi-tenant adversarial tests, workflow crash recovery, data backup/restore and end-to-end audit continuity pass in an isolated integration environment.
 
 ### Wave 2 — Real module lifecycle
 

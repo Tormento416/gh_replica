@@ -9,10 +9,10 @@ These decisions are defaults for implementation, not evidence that the correspon
 | ADR-003 | Modular core with out-of-process domain workers in production | Keeps optional dependencies out of core; independent rollout and fault boundaries | Network and operational overhead versus in-process modules | Measured latency and operational staffing; prototype uses in-process handlers only |
 | ADR-004 | Python reference kernel and AI adapters; TypeScript/React UI; Go optional at measured ingress bottlenecks | Aligns with Hyrlink's Python services, TS UI, and Go gateway; avoids rewriting inference tooling | Multiple toolchains; an all-TypeScript backend is simpler for a web-only team | Profiling or team expertise warrants a different default |
 | ADR-005 | JSON Schema/OpenAPI/AsyncAPI contracts and exact 0.1 core compatibility | Language-neutral, fail-closed, testable SDK generation | Exact compatibility initially requires synchronized upgrades | Contract evolution suite proves supported ranges |
-| ADR-006 | PostgreSQL for production records; SQLite only for local reference state | PostgreSQL supports transactions, effective dating, constraints, RLS and outbox | Managed operation, tuning, migrations; SQLite lacks distributed writer semantics | Workload evidence requires partitioning or dedicated stores |
+| ADR-006 | Database choice pending: evaluate Supabase and MongoDB; SQLite only for local reference state | Supabase provides managed PostgreSQL with SQL transactions and row-level security; MongoDB offers a document model and managed deployment options | PostgreSQL and MongoDB require different tenant-isolation, transaction, reporting, and operations designs | Startup-program decisions and workload-specific proof of concept |
 | ADR-007 | Temporal for production durable workflows | Existing retries, timers, histories, signals and long-running human tasks | Another service and workflow-version discipline; building our own durable engine adds risk | Operational cost or offline constraints prove unsuitable |
 | ADR-008 | Transactional outbox plus at-least-once delivery and idempotent consumers | Honest cross-service semantics; supports reconciliation | Duplicate handling and replay tooling; no promise of global exactly-once | High measured event volume warrants Kafka or a specialized broker |
-| ADR-009 | Start with PostgreSQL search/pgvector where adequate; external search optional | Reduces baseline service count and module bloat | Lower ceiling than dedicated search systems | Corpus, ACL filtering, recall or latency fails benchmark |
+| ADR-009 | Search provider remains provisional until the database decision and benchmarks | Avoids committing to a search implementation before the primary data model is selected | Provider-native search can simplify operations but may increase coupling | Database selection and corpus, ACL, recall, latency and offline requirements |
 | ADR-010 | OIDC/SAML/SCIM adapter with managed and self-hosted identity paths | Enterprise SSO and future disconnected operation | More integration testing than hard-wiring WorkOS | Customer deployment and identity requirements |
 | ADR-011 | Agents propose and orchestrate; deterministic code authorizes every tool | Model errors cannot directly grant permissions or approve payments | Explicit tools and policy engineering; unrestricted agents would appear faster initially | No removal of this boundary; only optimize implementations |
 | ADR-012 | NVIDIA-first evaluation behind portable provider contracts | Reuses maintained inference, retrieval, agent and evaluation infrastructure | GPU cost, licenses, product lifecycle and vendor coupling | Representative quality/cost/latency benchmark favors another implementation |
@@ -33,6 +33,14 @@ These decisions are defaults for implementation, not evidence that the correspon
 **Single process with every module feature-flagged**: fastest to operate initially, but violates the user's physical omission requirement. Rejected as the target architecture.
 
 **Fully separate microservice for every entity**: independent scaling, but excessive deployment, debugging, and transaction overhead before workloads justify it. Rejected; a domain module can contain a cohesive application and a few workers.
+
+## Database evaluation
+
+Supabase is a managed platform built on PostgreSQL; it is not a separate database engine from PostgreSQL. The existing PostgreSQL prototype is a candidate starting point for Supabase, but its migrations, database roles, connection handling, row-level security, transaction behavior, and deployment model must be validated against an actual Supabase environment before claiming compatibility.
+
+MongoDB would require a separate implementation of the tenant directory, permissions, transaction/outbox, migrations, and data-access policies. Application-enforced tenant filtering and database permissions must be tested independently; PostgreSQL row-level security policies do not automatically carry over. Multi-document transactions require an appropriate MongoDB deployment topology.
+
+Compare both options on tenant isolation, transaction semantics, effective-dated HR records, auditability, reporting and joins, event delivery, encryption, backup/restore, regional hosting, disconnected deployment, operational complexity, vendor terms, and total cost after startup-program decisions are known. Preserve stable domain-facing interfaces; do not assume the current SQL adapters are database-neutral.
 
 ## AI runtime alternatives
 
