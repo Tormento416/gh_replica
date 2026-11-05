@@ -16,6 +16,7 @@ from psycopg.conninfo import make_conninfo
 from hyrlink_platform.ade_identity_directory import IdentityDirectory
 from hyrlink_platform.ade_transaction_store import TenantRecordStore
 from hyrlink_platform.ade_outbox import Outbox
+from hyrlink_platform.ade_event_consumer import RecordCreatedConsumer
 from hyrlink_platform.ade_storage_contracts import OutboxStore, RecordStore, TenantDirectory
 from hyrlink_platform.ade_identity_middleware import IdentityMiddleware
 from hyrlink_platform.ade_workos_boundary import WorkOSSessionBoundary
@@ -41,6 +42,7 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
             connection.execute((ROOT / "migrations/ade_001_identity_directory.sql").read_text(), prepare=False)
             connection.execute((ROOT / "migrations/ade_002_transaction_boundary.sql").read_text(), prepare=False)
             connection.execute((ROOT / "migrations/ade_003_outbox_leases.sql").read_text(), prepare=False)
+            connection.execute((ROOT / "migrations/ade_004_consumer_inbox.sql").read_text(), prepare=False)
             connection.execute("CREATE ROLE ade_test_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS")
             connection.execute("GRANT USAGE ON SCHEMA ade_identity, ade_core TO ade_test_runtime")
             connection.execute("GRANT SELECT ON ALL TABLES IN SCHEMA ade_identity TO ade_test_runtime")
@@ -194,6 +196,41 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
     def test_dispatch_permission_required(self):
         with self.assertRaisesRegex(PlatformError, "permission_denied"):
             self.outbox.claim(Principal("user", "acme", frozenset()))
+
+    def test_consumer_deduplicates_concurrent_retries_and_isolates_tenants(self):
+        consumer = RecordCreatedConsumer(self.runtime_dsn, "counts")
+        worker = Principal("worker", "acme", frozenset({"platform:events-consume"}))
+        other = Principal("worker", "globex", worker.permissions)
+        event, record = uuid.uuid4(), uuid.uuid4()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(lambda _: consumer.apply(worker, event, record), range(2)))
+        self.assertEqual(sorted(outcomes), [False, True])
+        self.assertEqual(consumer.count(worker), 1)
+        self.assertEqual(consumer.count(other), 0)
+        self.assertTrue(consumer.apply(other, event, record))
+        self.assertEqual(consumer.count(other), 1)
+        with self.assertRaisesRegex(PlatformError, "event_identity_conflict"):
+            consumer.apply(worker, event, uuid.uuid4())
+
+    def test_failed_projection_rolls_back_inbox_for_retry(self):
+        consumer = RecordCreatedConsumer(self.runtime_dsn, "rollback-check")
+        worker = Principal("worker", "acme", frozenset({"platform:events-consume"}))
+        event, record = uuid.uuid4(), uuid.uuid4()
+        with psycopg.connect(DSN, autocommit=True) as connection:
+            connection.execute("REVOKE INSERT, UPDATE ON ade_core.consumer_projection FROM ade_test_runtime")
+            try:
+                with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                    consumer.apply(worker, event, record)
+            finally:
+                connection.execute("GRANT INSERT, UPDATE ON ade_core.consumer_projection TO ade_test_runtime")
+        self.assertTrue(consumer.apply(worker, event, record))
+        self.assertFalse(consumer.apply(worker, event, record))
+        self.assertEqual(consumer.count(worker), 1)
+
+    def test_consumer_requires_permission(self):
+        consumer = RecordCreatedConsumer(self.runtime_dsn, "counts")
+        with self.assertRaisesRegex(PlatformError, "permission_denied"):
+            consumer.apply(Principal("user", "acme", frozenset()), uuid.uuid4(), uuid.uuid4())
 
 
 if __name__ == "__main__":

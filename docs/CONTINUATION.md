@@ -18,6 +18,8 @@ Database selection update: the user is comparing Supabase and MongoDB while star
 
 Latest storage continuation: provider-neutral directory, record and outbox interfaces now exist. A signed synthetic HTTP request has been tested through the identity middleware and a real PostgreSQL directory, including cross-tenant rejection and immediate membership suspension. The PostgreSQL test instance is disposable. Supabase and MongoDB adapters and full production security/recovery remain unverified.
 
+The current leading brand candidate is Adelyr, not yet finalized; see `docs/architecture/ade_brand_direction.md`. A synthetic consumer inbox now demonstrates tenant-scoped, transactional database-effect deduplication for concurrent and failed deliveries. Network transport, external side-effect idempotency, event retention and production deployment remain future work.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

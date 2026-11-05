@@ -20,6 +20,8 @@ The sample store writes its record and outbox row in one database transaction. I
 
 This is not a message broker, exactly-once guarantee, audit log, payroll ledger, encryption system, or production domain model. Direct SQL permission to insert records does not force an outbox row; callers must use the approved transaction path until stronger enforcement is implemented. Production needs a separate dispatcher role limited to the outbox, a trusted tenant-scoped worker identity, delivery adapters, retry/backoff/dead-letter policies, monitoring and idempotent consumers.
 
+The reference consumer uses a tenant- and consumer-scoped inbox to atomically record a processed event and update a synthetic database projection. Concurrent duplicate delivery results in one database update; an event ID reused with a different record is rejected; failed projection updates roll back the inbox entry. This demonstrates deduplication for effects in the same database transaction only. External effects need their own idempotency, and incoming events must arrive through an authenticated and authorized transport. Inbox retention and replay policies remain to be designed.
+
 No connection pool is implemented. The middleware executes identity checks in worker threads; the adapter avoids sharing database connections between threads. Production deployment needs a bounded pool, credentials and TLS, tenant-aware policies, migration/recovery procedures, encryption, operational metrics and a separate security review.
 
 ## Integration verification
