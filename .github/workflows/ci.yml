@@ -8,6 +8,20 @@ concurrency:
 jobs:
   kernel:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres@sha256:748a18a54d3842d43bc156f0840d78029b8d349e0feca98c12b9c4ce3404a6b3
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ade_test_only_password
+          POSTGRES_DB: ade_identity_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ade_identity_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      ADE_TEST_DATABASE_URL: postgresql://postgres:ade_test_only_password@127.0.0.1:5432/ade_identity_test
     strategy:
       matrix:
         python: ['3.12', '3.13']

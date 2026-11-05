@@ -9,6 +9,7 @@ description = "Reference kernel and composition tooling for the Hyrlink modular 
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "jsonschema==4.26.0",
+    "psycopg[binary]>=3.2,<4",
     "pyjwt[crypto]>=2.10.1,<3",
 ]
 
@@ -17,6 +18,9 @@ hyrlink = "hyrlink_platform.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hyrlink_platform"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"migrations" = "hyrlink_platform/migrations"
 
 [tool.uv]
 package = true

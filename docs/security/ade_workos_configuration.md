@@ -43,6 +43,8 @@ WorkOS has multiple token profiles. AuthKit Connect tokens can use a different i
 
 The reference HTTP middleware connects the session-key snapshot to the identity boundary and injects the verified principal into `ade.principal`. It rejects duplicate host or authorization headers, ignores forwarded-host headers, and rejects WebSocket requests. It runs blocking verification and key retrieval in a worker thread; configured tenant and grant providers must therefore be thread-safe and bounded. The middleware is not attached to a production application. A trusted ingress must validate the externally addressed host and provide TLS, request-size limits, rate limiting, and timeout controls. Unknown signing keys do not trigger an immediate refresh; an authorized operator can refresh the key store explicitly during rotation.
 
+The separate staging client provided by the user was used to verify the public session-token signing-key endpoint returned a usable RSA key. This operation did not require or test the API key, and it did not validate a live access token or login flow.
+
 Current reference documentation: [WorkOS sessions](https://workos.com/docs/user-management/sessions), [AuthKit Connect token claims](https://workos.com/docs/authkit/connect/token-claims), and [JWKS reference](https://workos.com/docs/reference/authkit/session-tokens/jwks). Treat provider documentation as the authority for the actual configured environment.
 
 ## When values are ready

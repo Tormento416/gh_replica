@@ -10,6 +10,8 @@ WorkOS is the chosen provider. This platform uses a separate WorkOS organization
 
 Latest continuation: the key store and tenant boundary are connected through reference ASGI middleware. Synthetic tests exercise signed requests, spoofed forwarded hosts, duplicate headers, revoked grants and unknown signing keys. WorkOS values were not present in this cloud runtime; token-profile compatibility and live authentication remain unverified. Next implement thread-safe persistent tenant/grant stores, real provider-specific token validation, trusted ingress configuration and production integration tests. Do not expose the reference middleware as production-ready.
 
+Database continuation: PostgreSQL migrations now define an identity directory, tenant-scoped example records and a transactional outbox; adapters and restricted-role integration tests are implemented. See `docs/security/ade_database_boundary.md`. They do not constitute a production storage deployment. Next: migration version management, deployment roles/TLS, durable outbox dispatch and idempotency, encrypted real domain records, integration of the directory into a running service, and a controlled provider test once WorkOS configuration is available.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
