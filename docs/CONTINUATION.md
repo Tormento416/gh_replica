@@ -6,6 +6,8 @@ Prepare an autonomous, testable engineering foundation for the AI-native HRIS/CR
 
 Update: the foundation was pushed to `dev/foundation-transfer`; the user confirmed all fourteen private module repositories were created and their scaffolds pushed from Windows. The first identity-boundary implementation is on branch `ade_platform/identity-tenant-boundary`. Continue with authenticated ingress, provider-specific claim mapping and key rotation, persistent tenancy/grants, PostgreSQL isolation and outbox, and durable workflows. The older statements below describe the original checkpoint and are historical.
 
+WorkOS is the chosen provider. This platform uses a separate WorkOS organization or environment from the existing Hyrlink endpoint; never assume the existing client, issuer, keys or credentials. See `docs/security/ade_workos_configuration.md`. A fixed-host AuthKit session signing-key loader and bounded key snapshot are implemented and tested. Actual token profile compatibility, live sign-in, production ingress, and persisted grants remain open.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

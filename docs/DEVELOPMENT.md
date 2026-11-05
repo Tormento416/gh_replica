@@ -1,5 +1,7 @@
 # Local development and automation
 
+For WorkOS configuration and secure secret handling, see [WorkOS configuration](security/ade_workos_configuration.md).
+
 The current deliverable is a reference platform kernel and toolchain, not a production HRIS. Use synthetic data only. Python 3.12 and uv 0.13.4 were used for local verification. CI also declares Python 3.13, which is not yet locally verified.
 
 From the `gh_replica` checkout:
