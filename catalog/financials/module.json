@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "financials",
+  "version": "0.1.0",
+  "coreVersion": "0.1.0",
+  "requires": [],
+  "agent": {
+    "id": "financials-agent",
+    "maxToolCalls": 1,
+    "intents": {
+      "describe": "describe",
+      "prepare": "prepare"
+    }
+  },
+  "tools": [
+    {
+      "name": "describe",
+      "permission": "financials:read",
+      "risk": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "financials"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    },
+    {
+      "name": "prepare",
+      "permission": "financials:prepare",
+      "risk": "controlled",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "financials"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+apiVersion: platform.hyrlink.dev/v1alpha1
+kind: Module
+metadata:
+  name: example
+  version: 0.1.0
+spec:
+  displayName: Example Module
+  coreCompatibility: ">=0.1.0 <0.2.0"
+  dependencies:
+    required: []
+    optional: []
+  capabilities: []
+  apiContracts: []
+  eventContracts:
+    publishes: []
+    subscribes: []
+  workflows: []
+  scheduledJobs: []
+  permissions: []
+  migrations:
+    path: migrations
+    uninstallPolicy: retain
+  agent:
+    manifest: agent/agent.yaml
+  deployment:
+    descriptors: deploy
+  health:
+    readiness: /health/ready
+    liveness: /health/live
+  data:
+    owner: example
+    retentionClass: business-record

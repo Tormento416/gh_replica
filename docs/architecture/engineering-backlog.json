@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "bounded-implementation-with-reviewable-evidence",
+  "releasePolicy": "no-production-release-from-a-self-approved-agent-run",
+  "items": [
+    {"id": "FND-001", "state": "implemented-local", "scope": "core", "title": "Contracts, registry, dependency resolution and metadata composition", "dependsOn": [], "acceptance": "Malformed, cyclic and incomplete compositions fail; unselected metadata is absent"},
+    {"id": "FND-002", "state": "implemented-local", "scope": "core", "title": "Deterministic agent tool routing, approvals and local replay/audit", "dependsOn": ["FND-001"], "acceptance": "Tenant, permission, approval, replay, audit and restart tests pass"},
+    {"id": "FND-003", "state": "implemented-local", "scope": "toolchain", "title": "Private local module scaffolds, CLI, frozen dependencies and CI definition", "dependsOn": ["FND-001"], "acceptance": "14 scaffolds generated without altering reference checkouts; local checks pass"},
+    {"id": "REP-001", "state": "deferred-by-user", "scope": "github", "title": "Create and populate 14 private Hyrlink-dev remote repositories", "dependsOn": ["FND-003"], "acceptance": "GitHub confirms every private destination and scaffold commit; current authorization 403 resolved"},
+    {"id": "CORE-001", "state": "planned", "scope": "core", "title": "OIDC, trusted tenant-host binding and policy adapter", "dependsOn": ["FND-002"], "acceptance": "No request body or untrusted header can establish tenant or permission authority"},
+    {"id": "CORE-002", "state": "planned", "scope": "core", "title": "PostgreSQL, RLS, encrypted records, durable outbox and retention", "dependsOn": ["CORE-001"], "acceptance": "Cross-tenant SQL tests, restore drill and event replay/reconciliation tests pass"},
+    {"id": "CORE-003", "state": "planned", "scope": "core", "title": "Temporal durable workflows, schedules, human tasks and exceptions", "dependsOn": ["CORE-002"], "acceptance": "Crash/restart resumes tasks without duplicated real-world effects"},
+    {"id": "CORE-004", "state": "planned", "scope": "core", "title": "Signed artifacts, dependency compatibility, staged module lifecycle and cell deployment", "dependsOn": ["CORE-003"], "acceptance": "Install/upgrade/removal failure drills; no unselected image, frontend bundle or worker"},
+    {"id": "UI-001", "state": "planned", "scope": "public-shell", "title": "Accessible TypeScript design system and module-aware shell", "dependsOn": ["CORE-001"], "acceptance": "Candidate/employee/manager/internal realms follow role grants and lazy-load only installed module bundles"},
+    {"id": "TAL-001", "state": "planned", "scope": "private-modules", "title": "CRM, recruiting and candidate experience vertical slice", "dependsOn": ["REP-001", "CORE-004", "UI-001"], "acceptance": "Synthetic client request to approved offer; candidate consent/export/delete and interview evidence"},
+    {"id": "HR-001", "state": "planned", "scope": "private-modules", "title": "Core HR and lifecycle onboarding handoff", "dependsOn": ["TAL-001"], "acceptance": "One worker per accepted offer; effective-dated history and onboarding evidence"},
+    {"id": "AI-001", "state": "planned", "scope": "provider-adapters", "title": "NVIDIA evaluation, provider gateway, scoped retrieval and bounded plans", "dependsOn": ["CORE-001", "CORE-003"], "acceptance": "Quality/cost/injection/tenant-isolation benchmarks and offline fallback behavior pass"},
+    {"id": "OPS-001", "state": "planned", "scope": "private-modules", "title": "Benefits, payroll/time, assets/logistics and employee service", "dependsOn": ["HR-001", "AI-001"], "acceptance": "Provider sandbox reconciliation, domain fixtures and exception playbooks reviewed"},
+    {"id": "FIN-001", "state": "planned", "scope": "private-modules", "title": "AP, financials and incident/case modules", "dependsOn": ["OPS-001"], "acceptance": "Ledger balancing, replay-safe payments, separation of duties and case ACLs"},
+    {"id": "ENT-001", "state": "planned", "scope": "platform", "title": "Analytics, process intelligence, capacity, security and recovery program", "dependsOn": ["FIN-001"], "acceptance": "SLO, performance, accessibility, regional data and incident/restore exercises"},
+    {"id": "APL-001", "state": "future-discovery", "scope": "distribution", "title": "Disconnected appliance, Talos and federal/defense evaluation", "dependsOn": ["ENT-001"], "acceptance": "Funded customer requirement and signed offline install/update/restore proof"}
+  ]
+}

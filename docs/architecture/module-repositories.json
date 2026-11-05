@@ -1,0 +1,21 @@
+{
+  "owner": "Hyrlink-dev",
+  "visibility": "private",
+  "template": "templates/module",
+  "repositories": [
+    {"name": "gh-module-client-crm", "description": "Client CRM module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-recruiting", "description": "Recruiting and ATS module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-candidate-experience", "description": "Candidate experience and Anti-ATS module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-core-hr", "description": "Core HR records module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-lifecycle", "description": "Employee onboarding, lifecycle, and offboarding module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-benefits", "description": "Benefits administration module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-payroll-time", "description": "Payroll, time, and leave module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-accounts-payable", "description": "Accounts payable and vendor operations module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-assets-logistics", "description": "Asset and logistics operations module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-financials", "description": "Financial management module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-cases-incidents", "description": "Case and incident management module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-analytics", "description": "Analytics and process intelligence module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-employee-service", "description": "Employee service and communications module for the Hyrlink AI-native workforce platform"},
+    {"name": "gh-module-integration-packs", "description": "Optional integration packs for the Hyrlink AI-native workforce platform"}
+  ]
+}

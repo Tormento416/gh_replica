@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hyrlink-platform"
+version = "0.1.0"
+description = "Reference kernel and composition tooling for the Hyrlink modular platform"
+requires-python = ">=3.12,<3.14"
+dependencies = ["jsonschema==4.26.0"]
+
+[project.scripts]
+hyrlink = "hyrlink_platform.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hyrlink_platform"]
+
+[tool.uv]
+package = true

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "employee-service",
+  "version": "0.1.0",
+  "coreVersion": "0.1.0",
+  "requires": [],
+  "agent": {
+    "id": "employee-service-agent",
+    "maxToolCalls": 1,
+    "intents": {
+      "describe": "describe",
+      "prepare": "prepare"
+    }
+  },
+  "tools": [
+    {
+      "name": "describe",
+      "permission": "employee-service:read",
+      "risk": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "employee-service"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    },
+    {
+      "name": "prepare",
+      "permission": "employee-service:prepare",
+      "risk": "controlled",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "employee-service"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    }
+  ]
+}

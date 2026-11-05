@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "payroll-time",
+  "version": "0.1.0",
+  "coreVersion": "0.1.0",
+  "requires": [
+    "core-hr"
+  ],
+  "agent": {
+    "id": "payroll-time-agent",
+    "maxToolCalls": 1,
+    "intents": {
+      "describe": "describe",
+      "prepare": "prepare"
+    }
+  },
+  "tools": [
+    {
+      "name": "describe",
+      "permission": "payroll-time:read",
+      "risk": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "payroll-time"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    },
+    {
+      "name": "prepare",
+      "permission": "payroll-time:prepare",
+      "risk": "controlled",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "payroll-time"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    }
+  ]
+}

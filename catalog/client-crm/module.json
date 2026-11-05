@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "client-crm",
+  "version": "0.1.0",
+  "coreVersion": "0.1.0",
+  "requires": [],
+  "agent": {
+    "id": "client-crm-agent",
+    "maxToolCalls": 1,
+    "intents": {
+      "describe": "describe",
+      "prepare": "prepare"
+    }
+  },
+  "tools": [
+    {
+      "name": "describe",
+      "permission": "client-crm:read",
+      "risk": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "client-crm"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    },
+    {
+      "name": "prepare",
+      "permission": "client-crm:prepare",
+      "risk": "controlled",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "client-crm"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    }
+  ]
+}

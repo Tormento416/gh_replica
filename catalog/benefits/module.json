@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "benefits",
+  "version": "0.1.0",
+  "coreVersion": "0.1.0",
+  "requires": [
+    "core-hr"
+  ],
+  "agent": {
+    "id": "benefits-agent",
+    "maxToolCalls": 1,
+    "intents": {
+      "describe": "describe",
+      "prepare": "prepare"
+    }
+  },
+  "tools": [
+    {
+      "name": "describe",
+      "permission": "benefits:read",
+      "risk": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "benefits"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    },
+    {
+      "name": "prepare",
+      "permission": "benefits:prepare",
+      "risk": "controlled",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "status"
+        ],
+        "properties": {
+          "module": {
+            "const": "benefits"
+          },
+          "status": {
+            "const": "scaffold-only"
+          }
+        }
+      }
+    }
+  ]
+}

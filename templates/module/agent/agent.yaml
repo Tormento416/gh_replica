@@ -1,0 +1,29 @@
+apiVersion: platform.hyrlink.dev/v1alpha1
+kind: ModuleAgent
+metadata:
+  name: example-agent
+  module: example
+  version: 0.1.0
+spec:
+  description: Orchestrates approved operations for the example domain.
+  intents: []
+  tools: []
+  knowledgeSources: []
+  policies:
+    tenantContextRequired: true
+    purposeRequired: true
+    failClosed: true
+  approvals:
+    defaultClass: human-review
+    classes: []
+  limits:
+    maxSteps: 12
+    maxToolCalls: 20
+    maxRuntimeSeconds: 120
+  evaluation:
+    datasets: []
+    requiredChecks:
+      - authorization
+      - tenant-isolation
+      - tool-schema-validation
+      - audit-completeness

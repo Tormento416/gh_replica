@@ -1,0 +1,93 @@
+{
+  "recordedAtUtc": "2026-11-05T16:48:08.830126+00:00",
+  "python": "3.12.14",
+  "kernelTests": {
+    "executed": 51,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 51,
+    "successful": true
+  },
+  "validatedManifests": 14,
+  "moduleScaffoldTests": [
+    {
+      "module": "accounts-payable",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "analytics",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "assets-logistics",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "benefits",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "candidate-experience",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "cases-incidents",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "client-crm",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "core-hr",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "employee-service",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "financials",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "integration-packs",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "lifecycle",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "payroll-time",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    },
+    {
+      "module": "recruiting",
+      "state": "passed",
+      "scope": "scaffold consistency only"
+    }
+  ],
+  "limitations": [
+    "synthetic workflows only",
+    "no production auth or provider tests",
+    "metadata composition only",
+    "CI defined but not run on GitHub"
+  ],
+  "diffCheck": "passed",
+  "overall": "passed"
+}

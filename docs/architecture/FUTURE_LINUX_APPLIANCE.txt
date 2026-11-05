@@ -1,0 +1,165 @@
+HYRLINK LINUX APPLIANCE AND PRIVATE PLATFORM DISTRIBUTION
+Future Architecture Consideration
+
+Status
+------
+This document preserves the Linux/distribution discussion as a future product
+direction. It is not an immediate implementation commitment. The platform should
+be designed so this path remains possible without forcing early development to
+solve operating-system, hardware-certification, or appliance-support problems.
+
+Original Product Thought
+------------------------
+The platform could eventually be delivered as a complete operating environment
+similar in spirit to a specialized Linux distribution. Its backbone would run on
+a lightweight, purpose-built Linux image optimized for software services,
+enterprise server workloads, local AI, and modular extensions. It could operate
+without external data or Internet services while retaining the ability to add
+signed plugins, integrations, and product modules.
+
+The desired qualities are:
+
+* Extremely robust enterprise operation.
+* Low overhead and strong bare-metal performance.
+* Full offline, private, sovereign, or air-gapped operation.
+* A small required platform kernel with optional modules omitted entirely.
+* Programmable integrations and extensions through controlled interfaces.
+* A deployment form suitable for very large enterprises and government users.
+
+Recommended Interpretation
+--------------------------
+The practical implementation is a hardened enterprise appliance built on an
+established upstream Linux kernel and distribution foundation. Hyrlink should not
+create a new general-purpose operating system or maintain a heavily forked Linux
+kernel unless future scale provides an extraordinary reason to do so.
+
+The appliance would contain:
+
+    Enterprise hardware or approved hypervisor
+      Hardened, minimal, immutable Linux
+        Secure boot, TPM, disk encryption, and required hardware drivers
+        Container or microVM runtime
+        Hyrlink platform kernel and control plane
+        Customer-selected product modules
+        Local databases, queues, search, and object storage
+        Local NVIDIA inference and retrieval services where appropriate
+        Observability, backup, recovery, and administrative services
+        Signed plugin and integration runtime
+
+Using upstream Linux preserves mature hardware support, filesystems, networking,
+cryptography, vulnerability response, and security maintenance. Most application
+performance limits will come from database access, storage, networking,
+serialization, model inference, and application design rather than the small
+overhead of a standard Linux distribution or container runtime.
+
+Potential Delivery Forms
+------------------------
+The same platform contracts should eventually support three deployment forms:
+
+1. A managed cloud service for ordinary customers.
+2. A Kubernetes or container distribution for enterprises with existing
+   infrastructure.
+3. A hardened Hyrlink appliance for bare-metal, private-cloud, sovereign,
+   disconnected, and air-gapped environments.
+
+Talos Linux Consideration
+-------------------------
+Talos Linux is a minimal, immutable operating system built specifically for
+Kubernetes. It removes traditional server administration such as SSH, shells,
+and package managers. Machines are configured and operated through a declarative
+API and talosctl.
+
+Its relevant strengths are:
+
+* A small attack surface and limited interactive access.
+* Declarative and repeatable machine configuration.
+* Atomic operating-system and Kubernetes upgrades.
+* Consistent operation across bare metal, virtual machines, edge systems, and
+  cloud infrastructure.
+* Strong alignment with clustered, high-availability, GPU-enabled, and
+  air-gapped deployments.
+
+Its main tradeoff is reduced flexibility during early development and emergency
+debugging. Everything must be containerized and managed declaratively. Talos is
+therefore a promising mature-appliance foundation, not the preferred environment
+for initial product development.
+
+Federal and Defense Deployment Concept
+--------------------------------------
+A future offering could consist of a validated cluster of approximately 3 to 10
+appliance nodes, with additional capacity nodes purchased as needed. Node roles
+could include control plane, application compute, GPU inference, transactional
+data, object storage, backup, and disaster recovery. Storage-only expansion may
+be useful, but large deployments will also need independent compute, memory,
+network, and GPU scaling.
+
+This model could support large federal or defense organizations while keeping HR,
+payroll, financial, incident, and personnel data inside an approved boundary.
+No design should assume that an entire military branch can safely depend on one
+physical system or one site. Production designs must eliminate single points of
+failure and support multiple failure domains, geographic recovery, tested backup
+restoration, continuity of operations, and controlled disconnected operation.
+
+FedRAMP applies primarily to cloud services. A physical or private defense
+appliance may additionally or instead require the applicable authorization path,
+including DoD RMF, NIST SP 800-53 controls, DISA STIGs, FIPS 140-validated
+cryptography, supply-chain controls, continuous monitoring, audit evidence, and
+the appropriate DoD impact level. Exact obligations will depend on hosting,
+connectivity, data classification, customer, and operating model.
+
+Plugin and Extension Model
+--------------------------
+Plugins must not receive unrestricted hardware, operating-system, or platform-data
+access. Extensions should execute through versioned APIs and events inside an
+isolated WebAssembly, container, or microVM boundary. A signed plugin manifest
+should declare:
+
+* Required platform and module versions.
+* Permissions, tenant scope, and approved purposes.
+* API, event, workflow, and data access.
+* Network destinations and secrets references.
+* CPU, memory, storage, GPU, and execution limits.
+* Installation, upgrade, rollback, and removal behavior.
+* Provenance, signature, SBOM, license, and vulnerability information.
+
+The platform policy engine, rather than plugin code or an AI agent, remains the
+security boundary.
+
+Development Guidance Today
+--------------------------
+Current development should use ordinary Linux environments and containers while
+preserving a clean path to a future appliance. Every core service and product
+module should therefore be:
+
+* Containerized and declaratively configured.
+* Independently health-checked, versioned, installed, upgraded, and removed.
+* Free of undocumented Internet dependencies.
+* Able to use local identity, storage, queues, models, and observability.
+* Compatible with signed artifacts and reproducible builds.
+* Operable through APIs and automation without requiring interactive shell access.
+* Tested for backup, restore, migration, rollback, and disconnected operation.
+* Explicit about hardware, GPU, network, and external-service requirements.
+
+Recommended Timing
+------------------
+Do not begin by building the operating-system distribution. First stabilize the
+platform kernel, module contracts, installation lifecycle, data ownership,
+security model, backup and recovery behavior, upgrade process, and representative
+end-to-end workloads. Once those interfaces are proven, the appliance becomes a
+packaging, hardening, validation, and operations program rather than an
+architectural rewrite.
+
+A production appliance built on an existing Linux foundation is still a major
+undertaking. A credible initial version may require a specialized team working
+for 12 to 24 months, followed by permanent security, release, hardware-validation,
+compliance, and enterprise-support responsibilities. A genuinely custom Linux
+distribution would require substantially more staff and time and could become a
+separate product line.
+
+Standing Decision
+-----------------
+Keep the appliance, Talos Linux, federal, defense, sovereign, and air-gapped
+deployment path open. Build the platform now around portable containers,
+declarative configuration, strict module boundaries, local-service alternatives,
+signed extensions, and deterministic security controls. Revisit appliance
+implementation after the platform core and module lifecycle are stable.
