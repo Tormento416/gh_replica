@@ -41,6 +41,8 @@ The backbone can validate an RS256 token using explicitly trusted RSA public key
 
 WorkOS has multiple token profiles. AuthKit Connect tokens can use a different issuer, audience, and JWKS endpoint from AuthKit session tokens. The generic verifier currently requires `aud`, `nbf`, and a configurable token-use claim. Do not assume those claims are present in a particular WorkOS profile; the profile and audience must be confirmed against WorkOS documentation and a controlled integration test. No live WorkOS login, key rotation, provider-specific claim mapping, production ingress, or persisted grants are wired yet.
 
+The reference HTTP middleware connects the session-key snapshot to the identity boundary and injects the verified principal into `ade.principal`. It rejects duplicate host or authorization headers, ignores forwarded-host headers, and rejects WebSocket requests. It runs blocking verification and key retrieval in a worker thread; configured tenant and grant providers must therefore be thread-safe and bounded. The middleware is not attached to a production application. A trusted ingress must validate the externally addressed host and provide TLS, request-size limits, rate limiting, and timeout controls. Unknown signing keys do not trigger an immediate refresh; an authorized operator can refresh the key store explicitly during rotation.
+
 Current reference documentation: [WorkOS sessions](https://workos.com/docs/user-management/sessions), [AuthKit Connect token claims](https://workos.com/docs/authkit/connect/token-claims), and [JWKS reference](https://workos.com/docs/reference/authkit/session-tokens/jwks). Treat provider documentation as the authority for the actual configured environment.
 
 ## When values are ready

@@ -8,6 +8,8 @@ Update: the foundation was pushed to `dev/foundation-transfer`; the user confirm
 
 WorkOS is the chosen provider. This platform uses a separate WorkOS organization or environment from the existing Hyrlink endpoint; never assume the existing client, issuer, keys or credentials. See `docs/security/ade_workos_configuration.md`. A fixed-host AuthKit session signing-key loader and bounded key snapshot are implemented and tested. Actual token profile compatibility, live sign-in, production ingress, and persisted grants remain open.
 
+Latest continuation: the key store and tenant boundary are connected through reference ASGI middleware. Synthetic tests exercise signed requests, spoofed forwarded hosts, duplicate headers, revoked grants and unknown signing keys. WorkOS values were not present in this cloud runtime; token-profile compatibility and live authentication remain unverified. Next implement thread-safe persistent tenant/grant stores, real provider-specific token validation, trusted ingress configuration and production integration tests. Do not expose the reference middleware as production-ready.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
