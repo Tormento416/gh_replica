@@ -37,3 +37,9 @@ These decisions are defaults for implementation, not evidence that the correspon
 ## AI runtime alternatives
 
 Evaluate NVIDIA agent/runtime, retrieval and inference libraries against a provider-neutral reference on the same synthetic and consented evaluation sets. Compare quality, hallucinations, authorization bypass attempts, p95 latency, tokens per task, cost per completed task, GPU utilization, offline installation and maintenance effort. Do not choose a library from a feature list alone. The running prototype deliberately uses deterministic routing and no inference provider; that keeps its security behavior reproducible before adding probabilistic planning.
+
+## Identity boundary implementation
+
+The first adapter uses explicitly provisioned RSA public keys and RS256 access tokens with a fixed issuer, exact audience, mandatory timestamps, bounded token lifetime, and an explicit access-token-use claim. Tenant host and organization must agree with an active server-side tenant record; permissions come from a server-side subject-and-tenant lookup, never token role claims. Unknown keys, backend failures and ambiguous hosts fail closed. Explicit keys avoid an implicit network dependency and SSRF-prone discovery, at the cost of requiring a managed key refresh/rotation process before deployment. The host must be supplied by a trusted ingress; forwarded headers are not interpreted by this adapter.
+
+The adapter is not yet connected to a production HTTP endpoint, a real identity provider, or persistent tenancy and grant stores. Provider-specific claim mappings and key refresh, revocation and trusted-proxy policy require integration and testing before use with real data.

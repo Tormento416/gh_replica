@@ -4,6 +4,8 @@
 
 Prepare an autonomous, testable engineering foundation for the AI-native HRIS/CRM suite and a comprehensive morning-review report. `gh_replica` is the canonical public-capable backbone. Fourteen product modules are private `Hyrlink-dev` repositories. Existing Hyrlink checkouts are read-only sources.
 
+Update: the foundation was pushed to `dev/foundation-transfer`; the user confirmed all fourteen private module repositories were created and their scaffolds pushed from Windows. The first identity-boundary implementation is on branch `ade_platform/identity-tenant-boundary`. Continue with authenticated ingress, provider-specific claim mapping and key rotation, persistent tenancy/grants, PostgreSQL isolation and outbox, and durable workflows. The older statements below describe the original checkpoint and are historical.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
