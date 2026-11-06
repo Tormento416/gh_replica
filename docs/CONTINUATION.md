@@ -30,6 +30,8 @@ CRM durability checkpoint: commit `b73c950` on the same private branch adds a SQ
 
 Trusted-context checkpoint: the reference kernel can register a contextual handler that receives the already-verified principal and server request ID only after module, tenant, permission, approval and input-schema checks. Existing payload-only handlers remain supported. Tests verify that denied requests never reach the contextual handler and that replays do not execute it twice. This is in-process trusted code, not a plugin sandbox or production ingress.
 
+CRM integration checkpoint: the private CRM branch `ade_crm/account-foundation` now exposes `account-create` and `account-get` as contextual tools. Creation requires the platform's independent approval, receives the trusted principal and request ID from the platform, and persists its development account and event atomically. Nineteen module tests passed with the backbone installed, including tenant isolation and replay after kernel restart. The SQLite adapter remains development-only; duplicate override is not exposed as an agent tool. Module CI pins the backbone revision; remote CI status remains to be checked.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
