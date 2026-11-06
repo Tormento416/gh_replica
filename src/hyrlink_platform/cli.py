@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import psycopg
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -70,6 +71,8 @@ def main():
     commands.add_parser("validate")
     commands.add_parser("demo")
     commands.add_parser("workos-config")
+    commands.add_parser("migration-plan")
+    commands.add_parser("migration-apply")
     for command in ("compose", "scaffold", "catalog"):
         child = commands.add_parser(command)
         child.add_argument("--output", required=True, type=Path)
@@ -89,7 +92,13 @@ def main():
     root = args.root.resolve()
     try:
         manifest = parse_json((root / "docs/architecture/module-repositories.json").read_bytes())
-        if args.command == "workos-config":
+        if args.command in ("migration-plan", "migration-apply"):
+            from .ade_migrations import apply, plan
+            dsn = os.environ.get("ADE_MIGRATION_DSN", "")
+            if not dsn:
+                raise PlatformError("migration_dsn_not_configured")
+            result = (plan if args.command == "migration-plan" else apply)(dsn, root / "migrations")
+        elif args.command == "workos-config":
             result = {"workos": workos_config_status(os.environ), "connectivity": "not tested"}
         elif args.command == "catalog":
             generate_catalog(manifest, args.output)
@@ -127,6 +136,8 @@ def main():
                     kernel.close()
                 return
         print(json.dumps(result, indent=2))
+    except psycopg.Error:
+        parser.exit(1, "Setup failed: migration_database_error\n")
     except (PlatformError, OSError) as exc:
         parser.exit(1, f"Setup failed: {exc}\n")
 

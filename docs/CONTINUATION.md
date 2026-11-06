@@ -20,6 +20,8 @@ Latest storage continuation: provider-neutral directory, record and outbox inter
 
 The current leading brand candidate is Adelyr, not yet finalized; see `docs/architecture/ade_brand_direction.md`. A synthetic consumer inbox now demonstrates tenant-scoped, transactional database-effect deduplication for concurrent and failed deliveries. Network transport, external side-effect idempotency, event retention and production deployment remain future work.
 
+Migration checkpoint: a PostgreSQL journal now verifies migration sequence and checksums, refuses untracked pre-existing schemas, serializes runners with a database lock and atomically records each successful migration. `migration-plan` and `migration-apply` use `ADE_MIGRATION_DSN`; only explicitly selected, trusted databases should be used. Tested on disposable PostgreSQL. Provider selection remains open and this does not establish MongoDB support or Supabase compatibility. Next: authenticated bounded event delivery and a private CRM vertical slice.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

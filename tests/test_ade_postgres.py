@@ -3,6 +3,9 @@
 import os
 import asyncio
 import json
+import shutil
+import tempfile
+from contextlib import contextmanager
 import unittest
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -10,6 +13,7 @@ from pathlib import Path
 
 import psycopg
 import jwt
+from psycopg import sql
 from cryptography.hazmat.primitives.asymmetric import rsa
 from psycopg.conninfo import make_conninfo
 
@@ -19,6 +23,7 @@ from hyrlink_platform.ade_outbox import Outbox
 from hyrlink_platform.ade_event_consumer import RecordCreatedConsumer
 from hyrlink_platform.ade_storage_contracts import OutboxStore, RecordStore, TenantDirectory
 from hyrlink_platform.ade_identity_middleware import IdentityMiddleware
+from hyrlink_platform.ade_migrations import apply as apply_migrations, plan as migration_plan
 from hyrlink_platform.ade_workos_boundary import WorkOSSessionBoundary
 from hyrlink_platform.ade_workos_keys import SessionKeyStore
 from hyrlink_platform.identity import IdentityPolicy
@@ -39,10 +44,9 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
             row = connection.execute("SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname IN ('ade_identity', 'ade_core')) OR EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ade_test_runtime')").fetchone()
             if row[0]:
                 raise RuntimeError("integration tests require a fresh disposable database and role")
-            connection.execute((ROOT / "migrations/ade_001_identity_directory.sql").read_text(), prepare=False)
-            connection.execute((ROOT / "migrations/ade_002_transaction_boundary.sql").read_text(), prepare=False)
-            connection.execute((ROOT / "migrations/ade_003_outbox_leases.sql").read_text(), prepare=False)
-            connection.execute((ROOT / "migrations/ade_004_consumer_inbox.sql").read_text(), prepare=False)
+            result = apply_migrations(DSN, ROOT / "migrations")
+            if len(result["applied"]) != 4:
+                raise RuntimeError("expected four migrations")
             connection.execute("CREATE ROLE ade_test_runtime NOLOGIN NOSUPERUSER NOBYPASSRLS")
             connection.execute("GRANT USAGE ON SCHEMA ade_identity, ade_core TO ade_test_runtime")
             connection.execute("GRANT SELECT ON ALL TABLES IN SCHEMA ade_identity TO ade_test_runtime")
@@ -63,6 +67,62 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
         self.assertEqual((tenant.tenant, tenant.organization, tenant.active), ("acme", "org-acme", True))
         self.assertFalse(self.directory.tenant_for_host("paused.example.com").active)
         self.assertIsNone(self.directory.tenant_for_host("missing.example.com"))
+
+    def test_migration_plan_and_repeat_are_non_destructive(self):
+        self.assertEqual(migration_plan(DSN, ROOT / "migrations"), {"applied": 4, "pending": []})
+        self.assertEqual(apply_migrations(DSN, ROOT / "migrations"), {"applied": [], "remaining": []})
+
+    def test_modified_applied_migration_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "migrations"
+            shutil.copytree(ROOT / "migrations", target)
+            path = target / "ade_001_identity_directory.sql"
+            path.write_text("-- changed\n" + path.read_text())
+            with self.assertRaisesRegex(PlatformError, "migration_history_mismatch"):
+                apply_migrations(DSN, target)
+
+    def test_failed_migration_rolls_back_ddl_and_journal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "migrations"
+            shutil.copytree(ROOT / "migrations", target)
+            (target / "ade_005_failure_test.sql").write_text(
+                "BEGIN;\nCREATE TABLE ade_core.should_rollback (id int);\nSELECT 1 / 0;\nCOMMIT;\n")
+            with self.assertRaises(psycopg.errors.DivisionByZero):
+                apply_migrations(DSN, target)
+            with psycopg.connect(DSN) as connection:
+                self.assertIsNone(connection.execute("SELECT to_regclass('ade_core.should_rollback')").fetchone()[0])
+                self.assertEqual(connection.execute("SELECT count(*) FROM public.ade_migration_journal").fetchone()[0], 4)
+
+    @contextmanager
+    def fresh_database(self):
+        name = "ade_test_" + uuid.uuid4().hex
+        with psycopg.connect(DSN, autocommit=True) as connection:
+            connection.execute(sql.SQL("CREATE DATABASE {} ").format(sql.Identifier(name)))
+        try:
+            yield make_conninfo(DSN, dbname=name)
+        finally:
+            with psycopg.connect(DSN, autocommit=True) as connection:
+                connection.execute(sql.SQL("DROP DATABASE {} ").format(sql.Identifier(name)))
+
+    def test_untracked_existing_schema_is_not_adopted(self):
+        with self.fresh_database() as dsn:
+            with psycopg.connect(dsn, autocommit=True) as connection:
+                connection.execute("CREATE SCHEMA ade_core")
+            with self.assertRaisesRegex(PlatformError, "untracked_existing_schema"):
+                apply_migrations(dsn, ROOT / "migrations")
+            with psycopg.connect(dsn) as connection:
+                self.assertIsNone(connection.execute("SELECT to_regclass('public.ade_migration_journal')").fetchone()[0])
+
+    def test_concurrent_migration_runner_fails_closed(self):
+        with self.fresh_database() as dsn:
+            with psycopg.connect(dsn, autocommit=True) as connection:
+                connection.execute("SELECT pg_advisory_lock(hashtext('ade_platform_migrations'))")
+                try:
+                    with self.assertRaisesRegex(PlatformError, "migration_lock_unavailable"):
+                        apply_migrations(dsn, ROOT / "migrations")
+                finally:
+                    connection.execute("SELECT pg_advisory_unlock(hashtext('ade_platform_migrations'))")
+            self.assertEqual(len(apply_migrations(dsn, ROOT / "migrations")["applied"]), 4)
 
     def test_postgresql_adapters_satisfy_storage_interfaces(self):
         self.assertIsInstance(self.directory, TenantDirectory)
