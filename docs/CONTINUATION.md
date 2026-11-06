@@ -24,6 +24,8 @@ Migration checkpoint: a PostgreSQL journal now verifies migration sequence and c
 
 Delivery checkpoint: the reference outbox can now deliver tenant-scoped metadata to one configured allowlisted HTTPS destination using a bearer credential and a stable idempotency key. It rejects insecure TLS and redirects, schedules retries on send failure, and records uncertain acknowledgments. Local TLS and PostgreSQL tests pass. The receiver, dead-letter policy, secret rotation and deployed worker remain to be built. Next: inspect the existing private CRM module checkout, preserve local work, and build a bounded domain slice only in the private module repository.
 
+CRM checkpoint: the private `Hyrlink-dev/gh-module-client-crm` repository has branch `ade_crm/account-foundation` at commit `327a25d`. It adds a tenant-scoped account service, per-actor idempotency, a synthetic event, duplicate detection and a separately authorized duplicate override. Thirteen module tests pass. Its current repository is in-memory only; a durable local development adapter, production provider adapter, trusted platform tool context and audit are still required. The earlier uncommitted cloud scaffold remains untouched.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
