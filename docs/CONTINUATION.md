@@ -32,6 +32,8 @@ Trusted-context checkpoint: the reference kernel can register a contextual handl
 
 CRM integration checkpoint: the private CRM branch `ade_crm/account-foundation` now exposes `account-create` and `account-get` as contextual tools. Creation requires the platform's independent approval, receives the trusted principal and request ID from the platform, and persists its development account and event atomically. Nineteen module tests passed with the backbone installed, including tenant isolation and replay after kernel restart. The SQLite adapter remains development-only; duplicate override is not exposed as an agent tool. Module CI pins the backbone revision; remote CI status remains to be checked.
 
+CRM contact checkpoint: commit `f90018f` adds tenant-scoped contacts, development persistence and approved contextual create/read tools. Twenty-seven tests passed with the backbone installed, including concurrent retries, transactional rollback, approval, and cross-tenant account-link rejection. Contact names and emails are stored unencrypted in the development adapter; only synthetic data is permitted. The production database provider, encryption, real identity integration, retention and contact duplicate-override workflow remain open. Next: an approved client hiring request with a traceable recruiting handoff.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
