@@ -78,3 +78,7 @@ CRM GitHub Actions confirmed all 33 tests passed on `2d1dede`. Candidate product
 ### HyrLink recruiting source checkpoint
 
 The private recruiting branch `ade_recruiting/hiring-inbox` at `6a05c1b` contains a pinned HyrLink Pro source snapshot and the assessment `docs/ade_hyrlink_module_assessment.md`. The reference checkout was left unchanged. The new route planner is an offline prototype, not live gateway enforcement. The snapshot omits an existing nested gitlink and assistant-specific configuration. Nine module tests pass locally; the full copied application and its Go gateway were not built in this environment (the Go compiler is unavailable). Its production identity, tenant, storage, packaging and routing integration remain open. See the private assessment for acceptance gates and source provenance.
+
+### Shared services and landing journeys
+
+The user confirmed backbone-owned shared orchestration, authentication and the staff dashboard; recruiting keeps its unique workflows and candidate profile. Candidates land on their profile, while staff choose from installed, licensed and individually permitted modules. `docs/architecture/ade_shared_services_and_navigation.md` maps ownership and migration, including the unresolved multi-employer candidate identity model. `ade_navigation.py` is a synthetic logical-navigation prototype, not production authentication, a UI or live license enforcement.
