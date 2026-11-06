@@ -64,3 +64,7 @@ The PAT variable `gh_replica_fg_pat` became available in the new runtime, but a 
 ## Session-limit handling
 
 No callable scheduling or reminder tool was available in this session. This checkpoint is durable context, not a scheduled wakeup. It cannot restart an agent after a five-hour product limit. A new user turn or supported product automation must resume the work. Do not claim background progress while no agent is running.
+
+### CRM hiring-request checkpoint
+
+The private CRM branch `ade_crm/account-foundation` at `2d1dede` adds synthetic tenant-scoped hiring requests, with controlled platform approval, per-actor idempotency, and an identifier-only handoff event committed atomically in the development SQLite store. The 33 CRM tests pass locally, including platform approval, cross-tenant isolation, concurrent replay, and transaction rollback. The GitHub workflow pins backbone commit `82ddf4d`. The recruiting consumer, production persistence, secure transport and a production request-details API remain to be built; the event alone does not create a job. No customer data should be used with this development adapter.
