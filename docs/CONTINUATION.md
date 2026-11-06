@@ -68,3 +68,9 @@ No callable scheduling or reminder tool was available in this session. This chec
 ### CRM hiring-request checkpoint
 
 The private CRM branch `ade_crm/account-foundation` at `2d1dede` adds synthetic tenant-scoped hiring requests, with controlled platform approval, per-actor idempotency, and an identifier-only handoff event committed atomically in the development SQLite store. The 33 CRM tests pass locally, including platform approval, cross-tenant isolation, concurrent replay, and transaction rollback. The GitHub workflow pins backbone commit `82ddf4d`. The recruiting consumer, production persistence, secure transport and a production request-details API remain to be built; the event alone does not create a job. No customer data should be used with this development adapter.
+
+### Recruiting handoff checkpoint
+
+Private recruiting branch `ade_recruiting/hiring-inbox` at `3a942ca` adds a synthetic SQLite inbox for the CRM hiring-request event. It deduplicates retries, rejects conflicting IDs, scopes records by tenant and records them as pending details; its six local tests pass. The HyrLink Pro posting guide informed the decision that a brief client request must not automatically publish a role. The CRM outbox and recruiting inbox are not yet connected; trusted transport identity, tenant binding, an authorized details API, provider-specific durable storage and full requisition controls remain open. The reference inbox must not be exposed or used for real data.
+
+CRM GitHub Actions confirmed all 33 tests passed on `2d1dede`. Candidate product name Adelyr remains provisional; database provider selection remains pending startup-program decisions.
