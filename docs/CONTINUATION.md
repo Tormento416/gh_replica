@@ -26,6 +26,8 @@ Delivery checkpoint: the reference outbox can now deliver tenant-scoped metadata
 
 CRM checkpoint: the private `Hyrlink-dev/gh-module-client-crm` repository has branch `ade_crm/account-foundation` at commit `327a25d`. It adds a tenant-scoped account service, per-actor idempotency, a synthetic event, duplicate detection and a separately authorized duplicate override. Thirteen module tests pass. Its current repository is in-memory only; a durable local development adapter, production provider adapter, trusted platform tool context and audit are still required. The earlier uncommitted cloud scaffold remains untouched.
 
+CRM durability checkpoint: commit `b73c950` on the same private branch adds a SQLite development adapter. Account, idempotency and event changes commit together; tests cover restart, concurrent connections and failed-event rollback. SQLite has no database-enforced row-level security and is not a production provider choice. Seventeen module tests pass. Next: propagate trusted platform principal and request ID into module tool handlers without relying on caller-supplied identity.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
