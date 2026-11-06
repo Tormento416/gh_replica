@@ -22,6 +22,14 @@ class Principal:
     permissions: frozenset[str]
 
 
+@dataclass(frozen=True)
+class _ContextualHandler:
+    callback: object
+
+    def __call__(self, _payload):
+        raise RuntimeError("contextual_handler_requires_verified_context")
+
+
 class Kernel:
     def __init__(self, catalog, selected, tenants, database=":memory:"):
         self.installed = {name: copy.deepcopy(validate_module(catalog[name])) for name in resolve(catalog, selected)}
@@ -73,6 +81,17 @@ class Kernel:
         if (module, tool) in self.handlers or not callable(handler):
             raise PlatformError("invalid_handler_registration")
         self.handlers[module, tool] = handler
+
+    def register_with_context(self, module, tool, handler):
+        """Register trusted code receiving the verified principal and request ID.
+
+        Registration is an operator/startup action, never exposed to callers or
+        model output. Runtime authorization, approval and schema checks happen
+        before the handler sees the context.
+        """
+        if not callable(handler):
+            raise PlatformError("invalid_handler_registration")
+        self.register(module, tool, _ContextualHandler(handler))
 
     def _authorize(self, principal, tenant, module, tool):
         if not principal.actor or not tenant or principal.tenant != tenant:
@@ -145,7 +164,10 @@ class Kernel:
                 self._audit("tool_started", tenant=tenant, actor=principal.actor, module=module, tool=tool,
                             request_id=request_id, payload_hash=digest(payload))
                 try:
-                    result = handler(payload)
+                    if isinstance(handler, _ContextualHandler):
+                        result = handler.callback(principal, payload, request_id)
+                    else:
+                        result = handler(payload)
                     validate_instance(result, descriptor["outputSchema"])
                     encoded = canonical(result)
                 except Exception as exc:

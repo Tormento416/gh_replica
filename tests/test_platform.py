@@ -245,6 +245,27 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(PlatformError, "invalid_handler_registration"):
             self.kernel.register("client-crm", "describe", lambda _: {})
 
+    def test_contextual_handler_receives_verified_principal_and_request_id(self):
+        del self.kernel.handlers["client-crm", "describe"]
+        observed = []
+        def handler(principal, payload, request_id):
+            observed.append((principal, payload, request_id))
+            return {"module": "client-crm", "status": "scaffold-only"}
+        self.kernel.register_with_context("client-crm", "describe", handler)
+        self.invoke(request_id="server-request")
+        self.invoke(request_id="server-request")
+        self.assertEqual(observed, [(self.user, {}, "server-request")])
+
+    def test_contextual_handler_is_not_called_before_permission_or_approval(self):
+        del self.kernel.handlers["client-crm", "prepare"]
+        observed = []
+        self.kernel.register_with_context("client-crm", "prepare", lambda *args: observed.append(args))
+        with self.assertRaisesRegex(PlatformError, "approval_required"):
+            self.invoke(tool="prepare")
+        with self.assertRaisesRegex(PlatformError, "permission_denied"):
+            self.invoke(tool="prepare", principal=Principal("user", "acme", frozenset()))
+        self.assertEqual(observed, [])
+
     def test_source_catalog_mutation_cannot_downgrade_runtime_approval(self):
         self.catalog["client-crm"]["tools"][1]["risk"] = "read"
         with self.assertRaisesRegex(PlatformError, "approval_required"):

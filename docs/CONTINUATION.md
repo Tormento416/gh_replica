@@ -28,6 +28,8 @@ CRM checkpoint: the private `Hyrlink-dev/gh-module-client-crm` repository has br
 
 CRM durability checkpoint: commit `b73c950` on the same private branch adds a SQLite development adapter. Account, idempotency and event changes commit together; tests cover restart, concurrent connections and failed-event rollback. SQLite has no database-enforced row-level security and is not a production provider choice. Seventeen module tests pass. Next: propagate trusted platform principal and request ID into module tool handlers without relying on caller-supplied identity.
 
+Trusted-context checkpoint: the reference kernel can register a contextual handler that receives the already-verified principal and server request ID only after module, tenant, permission, approval and input-schema checks. Existing payload-only handlers remain supported. Tests verify that denied requests never reach the contextual handler and that replays do not execute it twice. This is in-process trusted code, not a plugin sandbox or production ingress.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.
