@@ -59,3 +59,7 @@ The user explicitly authorized importing HyrLink Pro into the private recruiting
 ## Shared backbone and post-login destinations
 
 The backbone owns shared authentication, session, tenant and authorization infrastructure, module entitlements, the staff shell and shared orchestration interfaces. Each module owns its domain services, processes and data. Candidates enter their recruiting profile; authorized staff enter the central dashboard and can select only installed, licensed and permitted modules. Navigation does not replace enforcement at the destination. Candidate identity may span employers, so an employer's tenant membership must not be assumed to establish candidate profile ownership or access. See `ade_shared_services_and_navigation.md` for the transition and unresolved candidate-context design.
+
+## Career breaks and experience scoring
+
+Count documented time worked; never penalize, investigate or infer the reason for time away. Equivalent worked time receives equivalent experience-duration credit regardless of continuity, and overlapping employment periods are counted once. Tool currency, institutional knowledge and other skills require actual evidence rather than assumptions from dates. Human reviewers judge the relevance of demonstrated qualifications. Candidate correction and uncertainty handling are required. This rule applies across extraction, scoring, ranking and explanations, not only the experience calculator; the copied recruiting implementation requires a full audit before use.

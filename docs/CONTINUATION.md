@@ -82,3 +82,7 @@ The private recruiting branch `ade_recruiting/hiring-inbox` at `6a05c1b` contain
 ### Shared services and landing journeys
 
 The user confirmed backbone-owned shared orchestration, authentication and the staff dashboard; recruiting keeps its unique workflows and candidate profile. Candidates land on their profile, while staff choose from installed, licensed and individually permitted modules. `docs/architecture/ade_shared_services_and_navigation.md` maps ownership and migration, including the unresolved multi-employer candidate identity model. `ade_navigation.py` is a synthetic logical-navigation prototype, not production authentication, a UI or live license enforcement.
+
+### Career-break requirement
+
+The user specified that gaps are not scrutinized: count time worked, not time away, and leave the relevance of evidenced skills to human review. Recruiting branch `ade_recruiting/hiring-inbox` commit `0b8aa14` documents the policy and tests the existing experience-duration component with equal eight-year histories, one containing a three-year break. The 11 local recruiting tests pass. The regression does not establish fairness of the full scoring pipeline; partial dates, missing roles, parsing, ranking, summaries and other continuity or recency proxies remain to be assessed. See the private module's `docs/ade_experience_scoring_policy.md`.
