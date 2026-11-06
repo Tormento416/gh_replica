@@ -164,6 +164,14 @@ class RuntimeTests(unittest.TestCase):
             self.invoke(tool="prepare", approval_id=approval, request_id="second-operation")
         self.assertEqual(len(self.calls), 1)
 
+    def test_controlled_action_audit_links_its_approval(self):
+        approval = self.approval()
+        self.invoke(tool="prepare", approval_id=approval)
+        events = [json.loads(row[0]) for row in self.kernel.db.execute("SELECT event FROM audit")]
+        started = next(event for event in events if event["event"] == "tool_started")
+        self.assertEqual(started["approval"], approval)
+        self.assertEqual(started["request_id"], "request-1")
+
     def test_self_approval_rejected(self):
         reviewer = Principal(self.user.actor, "acme", frozenset({"platform:approve"}))
         with self.assertRaisesRegex(PlatformError, "approval_permission_denied"):

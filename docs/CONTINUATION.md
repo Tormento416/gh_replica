@@ -34,6 +34,8 @@ CRM integration checkpoint: the private CRM branch `ade_crm/account-foundation` 
 
 CRM contact checkpoint: commit `f90018f` adds tenant-scoped contacts, development persistence and approved contextual create/read tools. Twenty-seven tests passed with the backbone installed, including concurrent retries, transactional rollback, approval, and cross-tenant account-link rejection. Contact names and emails are stored unencrypted in the development adapter; only synthetic data is permitted. The production database provider, encryption, real identity integration, retention and contact duplicate-override workflow remain open. Next: an approved client hiring request with a traceable recruiting handoff.
 
+Audit-link checkpoint: controlled tool-start records now include the validated approval ID and request ID, allowing an operator to correlate the action with its independent approval. This does not make the local hash chain tamper-proof or replace a production audit service.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

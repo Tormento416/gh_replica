@@ -162,7 +162,8 @@ class Kernel:
                     self.db.execute("UPDATE approvals SET used=1 WHERE id=?", (approval_id,))
                 self.db.execute("INSERT INTO operations VALUES (?, ?, ?, ?, 'started', NULL)", (*key, fingerprint))
                 self._audit("tool_started", tenant=tenant, actor=principal.actor, module=module, tool=tool,
-                            request_id=request_id, payload_hash=digest(payload))
+                            request_id=request_id, payload_hash=digest(payload),
+                            approval=approval_id if descriptor["risk"] == "controlled" else None)
                 try:
                     if isinstance(handler, _ContextualHandler):
                         result = handler.callback(principal, payload, request_id)
