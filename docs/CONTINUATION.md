@@ -22,6 +22,8 @@ The current leading brand candidate is Adelyr, not yet finalized; see `docs/arch
 
 Migration checkpoint: a PostgreSQL journal now verifies migration sequence and checksums, refuses untracked pre-existing schemas, serializes runners with a database lock and atomically records each successful migration. `migration-plan` and `migration-apply` use `ADE_MIGRATION_DSN`; only explicitly selected, trusted databases should be used. Tested on disposable PostgreSQL. Provider selection remains open and this does not establish MongoDB support or Supabase compatibility. Next: authenticated bounded event delivery and a private CRM vertical slice.
 
+Delivery checkpoint: the reference outbox can now deliver tenant-scoped metadata to one configured allowlisted HTTPS destination using a bearer credential and a stable idempotency key. It rejects insecure TLS and redirects, schedules retries on send failure, and records uncertain acknowledgments. Local TLS and PostgreSQL tests pass. The receiver, dead-letter policy, secret rotation and deployed worker remain to be built. Next: inspect the existing private CRM module checkout, preserve local work, and build a bounded domain slice only in the private module repository.
+
 ## Completed locally
 
 - Architecture, repository ownership, deployment-cell strategy and future Linux/Talos appliance note.

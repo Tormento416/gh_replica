@@ -10,6 +10,7 @@ import unittest
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from unittest.mock import patch
 
 import psycopg
 import jwt
@@ -21,6 +22,7 @@ from hyrlink_platform.ade_identity_directory import IdentityDirectory
 from hyrlink_platform.ade_transaction_store import TenantRecordStore
 from hyrlink_platform.ade_outbox import Outbox
 from hyrlink_platform.ade_event_consumer import RecordCreatedConsumer
+from hyrlink_platform.ade_event_delivery import HTTPSDelivery, deliver_batch
 from hyrlink_platform.ade_storage_contracts import OutboxStore, RecordStore, TenantDirectory
 from hyrlink_platform.ade_identity_middleware import IdentityMiddleware
 from hyrlink_platform.ade_migrations import apply as apply_migrations, plan as migration_plan
@@ -51,7 +53,7 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
             connection.execute("GRANT USAGE ON SCHEMA ade_identity, ade_core TO ade_test_runtime")
             connection.execute("GRANT SELECT ON ALL TABLES IN SCHEMA ade_identity TO ade_test_runtime")
             connection.execute("GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA ade_core TO ade_test_runtime")
-            connection.execute("INSERT INTO ade_identity.tenants VALUES ('acme', 'acme.example.com', 'org-acme', 'active'), ('globex', 'globex.example.com', 'org-globex', 'active'), ('paused', 'paused.example.com', 'org-paused', 'suspended')")
+            connection.execute("INSERT INTO ade_identity.tenants VALUES ('acme', 'acme.example.com', 'org-acme', 'active'), ('globex', 'globex.example.com', 'org-globex', 'active'), ('paused', 'paused.example.com', 'org-paused', 'suspended'), ('dispatch', 'dispatch.example.com', 'org-dispatch', 'active')")
             connection.execute("INSERT INTO ade_identity.memberships VALUES ('acme', 'user-1', 'active'), ('globex', 'user-1', 'active'), ('acme', 'blocked', 'suspended'), ('acme', 'empty', 'active')")
             connection.execute("INSERT INTO ade_identity.grants VALUES ('acme', 'user-1', 'client-crm:read'), ('globex', 'user-1', 'recruiting:read'), ('acme', 'blocked', 'client-crm:read')")
         cls.runtime_dsn = make_conninfo(DSN, options="-c role=ade_test_runtime")
@@ -256,6 +258,19 @@ class PostgreSQLBoundaryTests(unittest.TestCase):
     def test_dispatch_permission_required(self):
         with self.assertRaisesRegex(PlatformError, "permission_denied"):
             self.outbox.claim(Principal("user", "acme", frozenset()))
+
+    def test_dispatch_records_acknowledgment_after_transport_acceptance(self):
+        writer = Principal("writer", "dispatch", frozenset({"platform:records-write"}))
+        worker = Principal("worker", "dispatch", frozenset({"platform:outbox-dispatch"}))
+        record = self.store.create(writer, {"synthetic": "delivery"})
+        sink = HTTPSDelivery("https://events.example/deliver", frozenset({"events.example"}), "synthetic-token")
+        with patch.object(sink, "deliver") as send:
+            outcome = deliver_batch(self.outbox, worker, sink, limit=1, lease_seconds=20)
+        self.assertEqual(outcome["delivered"], 1)
+        self.assertEqual(send.call_count, 1)
+        with psycopg.connect(DSN) as connection:
+            delivered = connection.execute("SELECT delivered_at FROM ade_core.outbox WHERE record_id=%s", (record,)).fetchone()
+        self.assertIsNotNone(delivered[0])
 
     def test_consumer_deduplicates_concurrent_retries_and_isolates_tenants(self):
         consumer = RecordCreatedConsumer(self.runtime_dsn, "counts")
