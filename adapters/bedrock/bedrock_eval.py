@@ -103,6 +103,8 @@ def main(argv=None):
         provider = make_provider(client, args.model, {c["input"]: c["task"] for c in cases}, args.max_tokens)
         judge = make_judge(client, args.judge_model) if args.judge_model else None
         report = run_eval(cases, provider, judge, args.split)
+        if all(r["reason"] == "provider_error" for r in report["results"]):
+            raise PlatformError("all_cases_provider_error: check credentials, region and model access")
         report.update({"model": args.model, "judgeModel": args.judge_model, "region": args.region,
                        "split": args.split})
         with args.output.open("x", encoding="utf-8") as handle:
