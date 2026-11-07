@@ -15,7 +15,7 @@ from pathlib import Path
 
 from hyrlink_platform.contracts import PlatformError, parse_json
 from hyrlink_platform.evals import (JUDGE_SYSTEM, Completion, judge_prompt, load_dataset, parse_judge_score,
-                                    run_eval, system_prompt)
+                                    needs_judge, quiz_response_schema, run_eval, system_prompt)
 
 _MODEL = re.compile(r"[A-Za-z0-9._:/@-]{1,256}\Z")
 _LABEL = re.compile(r"[A-Za-z0-9._-]{1,64}\Z")
@@ -52,13 +52,19 @@ def _post(url, body, timeout):
         data = response.read(_MAX_RESPONSE + 1)
     if len(data) > _MAX_RESPONSE:
         raise ValueError("response_too_large")
-    return parse_json(data)
+    try:
+        return parse_json(data)
+    except PlatformError as exc:  # e.g. a proxy error page; fail the case, not the whole run
+        raise ValueError("invalid_json_response") from exc
 
 
-def _chat(base_url, model, system, prompt, max_tokens, timeout, post=_post):
-    reply = post(base_url + "/chat/completions", {
-        "model": model, "temperature": 0, "seed": 0, "max_tokens": max_tokens, "stream": False,
-        "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]}, timeout)
+def _chat(base_url, model, system, prompt, max_tokens, timeout, post=_post, schema=None):
+    body = {"model": model, "temperature": 0, "seed": 0, "max_tokens": max_tokens, "stream": False,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]}
+    if schema is not None:  # constrained decoding: the server only emits JSON matching the schema
+        body["response_format"] = {"type": "json_schema", "json_schema": {"name": "response", "strict": True,
+                                                                          "schema": schema}}
+    reply = post(base_url + "/chat/completions", body, timeout)
     usage = reply.get("usage") or {}
     choice = reply["choices"][0]
     return Completion(choice["message"]["content"] or "", usage.get("prompt_tokens", 0),
@@ -70,9 +76,15 @@ def _check_model(model):
         raise PlatformError("invalid_model")
 
 
-def make_provider(base_url, model, case_by_input, max_tokens=512, timeout=300, post=_post):
+def make_provider(base_url, model, case_by_input, max_tokens=512, timeout=300, post=_post, structured=False):
+    """structured=True sends a response schema for quiz_json cases so malformed JSON cannot be generated."""
     _check_model(model)
-    return lambda text: _chat(base_url, model, system_prompt(case_by_input[text]), text, max_tokens, timeout, post)
+
+    def provider(text):
+        case = case_by_input[text]
+        schema = quiz_response_schema(case) if structured and case["scorer"]["type"] == "quiz_json" else None
+        return _chat(base_url, model, system_prompt(case), text, max_tokens, timeout, post, schema)
+    return provider
 
 
 def make_judge(base_url, model, max_tokens=64, timeout=300, post=_post):
@@ -94,6 +106,8 @@ def main(argv=None):
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--no-warmup", action="store_true", help="skip the uncounted model-load request")
+    parser.add_argument("--structured", action="store_true",
+                        help="constrain quiz output with a JSON schema (server-side grammar)")
     parser.add_argument("--output", required=True, type=Path, help="new report file; never overwritten")
     args = parser.parse_args(argv)
     try:
@@ -101,11 +115,12 @@ def main(argv=None):
             raise PlatformError("invalid_argument")
         cases = load_dataset(args.dataset.read_bytes())
         selected = [c for c in cases if args.split in (None, c["split"])]
-        if any(c["scorer"]["type"] == "judge" for c in selected) and not args.judge_model:
+        if needs_judge(selected) and not args.judge_model:
             raise PlatformError("judge_model_required")
         base = check_base_url(args.base_url, args.allow_remote)
         judge_base = check_base_url(args.judge_base_url or args.base_url, args.allow_remote)
-        provider = make_provider(base, args.model, {c["input"]: c for c in cases}, args.max_tokens, args.timeout)
+        provider = make_provider(base, args.model, {c["input"]: c for c in cases}, args.max_tokens, args.timeout,
+                                 structured=args.structured)
         judge = make_judge(judge_base, args.judge_model, timeout=args.timeout) if args.judge_model else None
         if not args.no_warmup:  # first request loads weights; keep that out of the latency numbers
             _chat(base, args.model, "Reply with OK.", "ping", 4, args.timeout)
@@ -113,11 +128,12 @@ def main(argv=None):
         if all(r["reason"] in ("provider_error", "judge_error") for r in report["results"]):
             raise PlatformError("all_cases_failed: check the server, model name and base URL")
         report.update({"label": args.label, "model": args.model, "judgeModel": args.judge_model,
-                       "host": urllib.parse.urlsplit(base).hostname, "split": args.split})
+                       "host": urllib.parse.urlsplit(base).hostname, "split": args.split,
+                       "structured": args.structured, "maxTokens": args.max_tokens})
         with args.output.open("x", encoding="utf-8") as handle:
             json.dump(report, handle, indent=2)
         keys = ("label", "model", "total", "passed", "passRate", "p50LatencyMs", "p95LatencyMs",
-                "outputTokensPerSecond", "generationSeconds", "judgeSeconds", "wallSeconds", "truncatedCases", "failures")
+                "outputTokensPerSecond", "generationSeconds", "judgeSeconds", "wallSeconds", "truncatedCases", "errorCodes", "failures")
         print(json.dumps({k: report[k] for k in keys}, indent=2))
     except (PlatformError, OSError, ValueError) as exc:
         sys.exit(f"Eval failed: {exc}")

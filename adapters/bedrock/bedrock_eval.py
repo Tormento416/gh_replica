@@ -12,7 +12,7 @@ from pathlib import Path
 
 from hyrlink_platform.contracts import PlatformError, parse_json
 from hyrlink_platform.evals import (JUDGE_SYSTEM, Completion, judge_prompt, load_dataset, parse_judge_score,
-                                    run_eval, system_prompt)
+                                    needs_judge, run_eval, system_prompt)
 
 _MODEL_ID = re.compile(r"[A-Za-z0-9._:/-]{1,2048}\Z")
 _REGION = re.compile(r"[a-z]{2}(?:-[a-z]+)+-\d\Z")
@@ -80,7 +80,7 @@ def main(argv=None):
     try:
         cases = load_dataset(args.dataset.read_bytes())
         selected = [c for c in cases if args.split in (None, c["split"])]
-        if any(c["scorer"]["type"] == "judge" for c in selected) and not args.judge_model:
+        if needs_judge(selected) and not args.judge_model:
             raise PlatformError("judge_model_required")
         if not 1 <= args.max_tokens <= 4096:
             raise PlatformError("invalid_max_tokens")

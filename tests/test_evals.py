@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 
 from hyrlink_platform.contracts import PlatformError
-from hyrlink_platform.evals import Completion, compare, load_dataset, run_eval, score, system_prompt
+from hyrlink_platform.evals import (Completion, compare, load_dataset, parse_judge_score, quiz_response_schema,
+                                    run_eval, score,
+                                    system_prompt)
 
 SEED = Path(__file__).resolve().parents[1] / "evals/golden/synthetic_seed.jsonl"
 
@@ -152,6 +154,67 @@ class RunnerTests(unittest.TestCase):
                           judge=lambda c, o: 1 / 0, clock=lambda: next(ticks))
         self.assertEqual(report["results"][0]["reason"], "judge_error")
         self.assertGreater(report["outputTokensPerSecond"], 0)
+
+    def test_quiz_constraints(self):
+        def quiz(question, options):
+            return json.dumps({"questions": [{"q": question, "options": options, "answer": 0}]})
+        strict = case(expected={"questions": 1}, scorer={"type": "quiz_json", "forbid": ["all of the above"], "max_words": 8})
+        self.assertTrue(score(strict, quiz("What is a join?", ["a", "b", "c", "d"]))[0])
+        self.assertFalse(score(strict, quiz("What is a join?", ["a", "b", "c", "All of the above"]))[0])
+        self.assertFalse(score(strict, quiz("one two three four five six seven eight nine", ["a", "b", "c", "d"]))[0])
+        for scorer in ({"type": "exact", "forbid": ["x"]}, {"type": "exact", "max_words": 10}):
+            with self.subTest(scorer=scorer), self.assertRaises(PlatformError):
+                load_dataset(dataset(case(scorer=scorer)))
+
+    def test_error_codes_never_include_messages(self):
+        class Boom(Exception):
+            code = 503
+        def provider(text):
+            raise Boom("secret detail Jordan Lee")
+        report = run_eval([case(id="a", input="1"), case(id="b", input="2")], provider)
+        self.assertEqual(report["errorCodes"], {"http_503": 2})
+        self.assertNotIn("secret", json.dumps(report))
+
+    def test_run_stops_early_when_server_is_down(self):
+        calls = []
+        def provider(text):
+            calls.append(text)
+            raise ConnectionRefusedError("down")
+        cases = [case(id=f"c{i}", input=str(i)) for i in range(20)]
+        with self.assertRaises(PlatformError) as ctx:
+            run_eval(cases, provider)
+        self.assertEqual(len(calls), 5)
+        self.assertIn("connectionrefusederror", str(ctx.exception))
+        self.assertEqual(run_eval(cases[:3], provider, max_consecutive_errors=None)["passed"], 0)
+
+    def test_success_resets_the_error_streak(self):
+        outcomes = iter([False] * 4 + [True] + [False] * 4)
+        def provider(text):
+            if not next(outcomes):
+                raise OSError("x")
+            return Completion("a")
+        cases = [case(id=f"c{i}", input=str(i)) for i in range(9)]
+        self.assertEqual(run_eval(cases, provider)["total"], 9)
+
+    def test_malformed_judge_reply_fails_one_case_not_the_run(self):
+        judged = case(scorer={"type": "judge", "rubric": "r"})
+        for reply in ("{score: 0.8}", "{", "no braces", '{"score": "high"}'):
+            with self.subTest(reply=reply):
+                def judge(c, o, reply=reply):
+                    return parse_judge_score(reply)
+                report = run_eval([judged], lambda t: Completion("x"), judge)
+                self.assertEqual(report["results"][0]["reason"], "judge_error")
+
+    def test_quiz_response_schema_matches_scorer_shape(self):
+        from jsonschema import Draft202012Validator
+        validator = Draft202012Validator(quiz_response_schema(case(expected={"questions": 2}, scorer={"type": "quiz_json"})))
+        good = {"questions": [{"q": "Q?", "options": ["a", "b", "c", "d"], "answer": 1}] * 2}
+        self.assertTrue(validator.is_valid(good))
+        for bad in ({"questions": good["questions"][:1]},
+                    {"questions": [dict(good["questions"][0], answer=4)] * 2},
+                    {"questions": [dict(good["questions"][0], options=["a", "b", "c"])] * 2},
+                    {"questions": good["questions"], "extra": 1}):
+            self.assertFalse(validator.is_valid(bad))
 
     def test_system_prompt_appends_instructions(self):
         self.assertTrue(system_prompt(case(instructions="Use labels a,b.")).endswith("Use labels a,b."))

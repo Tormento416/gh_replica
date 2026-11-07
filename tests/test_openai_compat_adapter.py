@@ -67,6 +67,22 @@ class OpenAICompatTests(unittest.TestCase):
                 "scorer": {"type": "exact"}}
         self.assertEqual(run_eval([case], provider)["truncatedCases"], 1)
 
+    def test_structured_sends_schema_only_for_quiz_cases(self):
+        seen = []
+        post = lambda url, body, timeout: seen.append(body) or reply("{}")
+        quiz = {"task": "generation", "expected": {"questions": 3}, "scorer": {"type": "quiz_json"}}
+        other = {"task": "qa", "expected": "x", "scorer": {"type": "exact"}}
+        cases = {"q": quiz, "o": other}
+        adapter.make_provider("http://127.0.0.1:1/v1", "m", cases, structured=True, post=post)("q")
+        adapter.make_provider("http://127.0.0.1:1/v1", "m", cases, structured=True, post=post)("o")
+        adapter.make_provider("http://127.0.0.1:1/v1", "m", cases, structured=False, post=post)("q")
+        fmt = seen[0]["response_format"]
+        self.assertEqual(fmt["type"], "json_schema")
+        questions = fmt["json_schema"]["schema"]["properties"]["questions"]
+        self.assertEqual((questions["minItems"], questions["maxItems"]), (3, 3))
+        self.assertNotIn("response_format", seen[1])
+        self.assertNotIn("response_format", seen[2])
+
     def test_invalid_model_rejected(self):
         for model in ("", "a b", "x;y", None):
             with self.subTest(model=model), self.assertRaises(PlatformError):

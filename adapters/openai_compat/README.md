@@ -21,3 +21,14 @@ Copy the repo and models to the instance, serve both models (they fit together o
 
 ## Comparing runs
 Accuracy: pass rate by task and the failing case ids. Speed: `p50LatencyMs`, `p95LatencyMs`, `outputTokensPerSecond`, and `generationSeconds`/`judgeSeconds`/`wallSeconds`. Use `hyrlink_platform.evals.compare` on two reports for per-case regressions.
+
+## On a node with the hyrlink-pro llama-server containers
+`node_run.sh` resolves the Gemma and Qwen container IPs by name on every run (they change when compose recreates a container), waits for both `/health` endpoints, writes an environment snapshot next to the report, and exits 3 with `INVALID RUN` if either container restarted during the run. It only reads docker metadata.
+
+```sh
+adapters/openai_compat/node_run.sh g4dn-xlarge evals/golden/skill_quiz_100.jsonl results/
+```
+Override `GEMMA_CONTAINER`, `QWEN_CONTAINER`, `GEMMA_MODEL`, `QWEN_MODEL`, `MAX_TOKENS` or `PYTHON` with environment variables, and set `STRUCTURED=1` to pass `--structured`. Needs `docker`, `curl` and a venv with `jsonschema` (see the repo `pyproject.toml`).
+
+## Structured output
+`--structured` sends a JSON schema (`evals.quiz_response_schema`) with each quiz request as `response_format`. Ollama and llama-server compile it into a grammar, so the reply is always valid JSON with the right question count, four options and an answer index 0-3. Distinct options, forbidden phrases and word limits are still checked by the scorer. The report records `structured` so runs with and without it are never mixed up.
