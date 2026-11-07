@@ -9,10 +9,11 @@ JSONL, one case per line, validated by `CASE_SCHEMA`. Datasets are synthetic onl
 | Field | Meaning |
 |---|---|
 | `id` | Unique, `[a-z0-9._-]`, up to 64 chars |
-| `task` | `extraction`, `classification`, `qa`, `tool_call` |
+| `task` | `extraction`, `classification`, `qa`, `tool_call`, `generation` |
 | `split` | `train`, `dev`, `test`. The same input may not appear in more than one split |
 | `input` / `expected` | Prompt text; expected string or object |
-| `scorer` | `exact`, `contains`, `json_fields` (optional `fields`), `tool_call`, or `judge` (needs `rubric`, optional `threshold`) |
+| `instructions` | Optional task contract shown to the model (schema, labels, tool list) |
+| `scorer` | `exact`, `contains`, `json_fields` (optional `fields`), `tool_call`, or `judge` (needs `rubric`, optional `threshold`), or `quiz_json` (expected `{"questions": n}`; checks structure, then judges with an optional `rubric`) |
 | `tags` | Optional labels such as the module name |
 
 See `evals/golden/synthetic_seed.jsonl`.
@@ -32,3 +33,9 @@ compare(base, tuned)  # pass-rate delta, regressions, improvements
 ```
 
 Reports contain pass rate, per-task counts, p95 latency, token totals and failing case ids, never inputs or outputs. A provider exception fails that case with `provider_error`. A fine-tune is justified only when `test` pass rate stays below your target after prompt and few-shot work. Never tune on `dev` or `test` cases, and hold the `test` split out of every training export.
+
+## Speed metrics and two-phase scoring
+
+`run_eval` finishes generation for every case before judge scoring. The report adds `p50LatencyMs`, `p95LatencyMs` (generation only), `outputTokensPerSecond`, `generationSeconds`, `judgeSeconds` and `wallSeconds`, so the same dataset can compare hardware as well as accuracy. Adapters: `adapters/bedrock` (Converse API) and `adapters/openai_compat` (Ollama, llama.cpp, vLLM).
+
+Datasets: `synthetic_seed.jsonl` (format example), `core_hr_50.jsonl` (extraction, classification, QA, tool calls, summaries) and `skill_quiz_50.jsonl` (skill-validation quiz generation).

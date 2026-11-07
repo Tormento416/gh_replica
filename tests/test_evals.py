@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from hyrlink_platform.contracts import PlatformError
-from hyrlink_platform.evals import Completion, compare, load_dataset, run_eval, score
+from hyrlink_platform.evals import Completion, compare, load_dataset, run_eval, score, system_prompt
 
 SEED = Path(__file__).resolve().parents[1] / "evals/golden/synthetic_seed.jsonl"
 
@@ -64,6 +64,27 @@ class ScoringTests(unittest.TestCase):
         self.assertTrue(score(tool, '{"tool":"t","arguments":{"x":1}}')[0])
         self.assertFalse(score(tool, '{"tool":"t","arguments":{"x":1,"extra":2}}')[0])
 
+    def test_quiz_json_scorer(self):
+        good = {"questions": [{"q": "Q1?", "options": ["a", "b", "c", "d"], "answer": 2},
+                              {"q": "Q2?", "options": ["w", "x", "y", "z"], "answer": 0}]}
+        quiz = case(expected={"questions": 2}, scorer={"type": "quiz_json"})
+        self.assertTrue(score(quiz, json.dumps(good))[0])
+        self.assertTrue(score(quiz, "```json" + chr(10) + json.dumps(good) + chr(10) + "```")[0])
+        bad_options = {"questions": [dict(good["questions"][0], options=["a", "a", "c", "d"]), good["questions"][1]]}
+        for output in (json.dumps({"questions": good["questions"][:1]}), json.dumps(bad_options),
+                       json.dumps({"questions": [dict(good["questions"][0], answer=4), good["questions"][1]]}),
+                       json.dumps({"questions": [dict(good["questions"][0], answer=True), good["questions"][1]]}),
+                       json.dumps({"questions": ["x", "y"]}), "not json"):
+            with self.subTest(output=output[:40]):
+                self.assertFalse(score(quiz, output)[0])
+        rubric = case(expected={"questions": 2}, scorer={"type": "quiz_json", "rubric": "r", "threshold": 0.5})
+        self.assertEqual(score(rubric, "bad", judge=lambda c, o: self.fail("judge must not run")), (False, "quiz_shape"))
+        self.assertTrue(score(rubric, json.dumps(good), judge=lambda c, o: 0.6)[0])
+        with self.assertRaises(PlatformError):
+            score(rubric, json.dumps(good))
+        with self.assertRaises(PlatformError):
+            load_dataset(dataset(case(expected={"questions": 0}, scorer={"type": "quiz_json"})))
+
     def test_judge_requires_injected_callable(self):
         judged = case(scorer={"type": "judge", "rubric": "r", "threshold": 0.5})
         with self.assertRaises(PlatformError):
@@ -106,6 +127,35 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(len(delta["regressions"]), 5)  # the judge case still passes
         with self.assertRaises(PlatformError):
             compare(good, run_eval(self.cases, self.provider, judge, split="dev"))
+
+
+    def test_judge_runs_only_after_all_generation(self):
+        events = []
+
+        def provider(text):
+            events.append("gen")
+            return Completion("x", 1, 2)
+
+        def judge(case, output):
+            events.append("judge")
+            return 1.0
+        judged = {"type": "judge", "rubric": "r"}
+        cases = [case(id="a", input="1", scorer=judged), case(id="b", input="2", scorer=judged)]
+        report = run_eval(cases, provider, judge)
+        self.assertEqual(events, ["gen", "gen", "judge", "judge"])
+        for key in ("p50LatencyMs", "wallSeconds", "generationSeconds", "judgeSeconds", "outputTokensPerSecond"):
+            self.assertIn(key, report)
+
+    def test_judge_failure_is_judge_error_and_speed_uses_fake_clock(self):
+        ticks = iter(range(0, 1000, 1))
+        report = run_eval([case(scorer={"type": "judge", "rubric": "r"})], lambda t: Completion("x", 0, 10),
+                          judge=lambda c, o: 1 / 0, clock=lambda: next(ticks))
+        self.assertEqual(report["results"][0]["reason"], "judge_error")
+        self.assertGreater(report["outputTokensPerSecond"], 0)
+
+    def test_system_prompt_appends_instructions(self):
+        self.assertTrue(system_prompt(case(instructions="Use labels a,b.")).endswith("Use labels a,b."))
+        self.assertNotIn("labels", system_prompt(case()))
 
 
 if __name__ == "__main__":

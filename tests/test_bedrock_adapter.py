@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from hyrlink_platform.contracts import PlatformError
-from hyrlink_platform.evals import load_dataset, run_eval
+from hyrlink_platform.evals import TASK_PROMPTS, load_dataset, run_eval
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("bedrock_eval", ROOT / "adapters/bedrock/bedrock_eval.py")
@@ -25,7 +25,7 @@ class FakeClient:
 class BedrockAdapterTests(unittest.TestCase):
     def setUp(self):
         self.cases = load_dataset((ROOT / "evals/golden/synthetic_seed.jsonl").read_bytes())
-        self.tasks = {c["input"]: c["task"] for c in self.cases}
+        self.tasks = {c["input"]: c for c in self.cases}
 
     def test_provider_builds_converse_request_and_reports_usage(self):
         client = FakeClient("answer")
@@ -35,6 +35,14 @@ class BedrockAdapterTests(unittest.TestCase):
         self.assertEqual(call["modelId"], "amazon.nova-lite-v1:0")
         self.assertEqual(call["inferenceConfig"], {"maxTokens": 99, "temperature": 0.0})
         self.assertIn("tool", call["system"][0]["text"])
+
+    def test_instructions_are_appended_to_system_prompt(self):
+        client = FakeClient("x")
+        case = {"task": "qa", "instructions": "Use only these labels: a, b."}
+        bedrock_eval.make_provider(client, "m", {"q": case})("q")
+        system = client.calls[0]["system"][0]["text"]
+        self.assertTrue(system.startswith(TASK_PROMPTS["qa"]))
+        self.assertTrue(system.endswith("Use only these labels: a, b."))
 
     def test_full_run_with_fake_client(self):
         oracle = {c["input"]: c["expected"] for c in self.cases}
