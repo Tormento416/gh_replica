@@ -77,6 +77,8 @@ def main():
             child.add_argument("--modules", required=True)
         if command == "scaffold":
             child.add_argument("--git", action="store_true")
+    child = commands.add_parser("eval-validate")
+    child.add_argument("--dataset", required=True, type=Path)
     child = commands.add_parser("repositories")
     child.add_argument("--apply", action="store_true")
     child = commands.add_parser("verify")
@@ -96,6 +98,10 @@ def main():
             result = {"generated": len(manifest["repositories"])}
         elif args.command == "scaffold":
             result = {"repositories": scaffold(manifest, args.output, args.git)}
+        elif args.command == "eval-validate":
+            from .evals import load_dataset
+            cases = load_dataset(args.dataset.read_bytes())
+            result = {"cases": len(cases), "splits": {s: sum(c["split"] == s for c in cases) for s in ("train", "dev", "test")}}
         elif args.command == "repositories":
             result = {"repositories": provision_repositories(manifest, args.apply)}
         elif args.command == "verify":

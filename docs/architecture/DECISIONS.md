@@ -23,6 +23,7 @@ These decisions are defaults for implementation, not evidence that the correspon
 | ADR-017 | Talos/immutable Linux appliance remains a future packaging target | Preserves sovereign/private/federal options | No appliance, OS fork, or certification work in the first product slice | Proven platform operations plus a funded enterprise appliance customer |
 | ADR-018 | Preserve all reference repositories; adapt only reviewed components | Prevents disrupting existing Hyrlink work and copying unknown dependencies | Requires provenance and license review | Explicit authorization to modify a particular source repository |
 | ADR-019 | Human product review precedes production release; ordinary implementation and tests are automated | Fits the user's morning review model and limits operational blast radius | Not 100% autonomous commercial/legal decision-making | User-defined release policy can automate lower-risk approved changes |
+| ADR-020 | Provider-neutral eval harness over synthetic JSONL golden datasets; model adapters live outside the backbone | Model and fine-tune choices need repeatable evidence before spend; keeps Bedrock/SageMaker/NVIDIA/open models comparable | Synthetic-only data and deterministic scorers limit realism; judge scoring needs an injected judge | Consented-data intake path approved, or a module needs richer metrics |
 
 ## Deployment alternatives that remain available
 
