@@ -1,0 +1,2 @@
+# Shell scripts run on Linux nodes; CRLF endings break sh there.
+*.sh text eol=lf
